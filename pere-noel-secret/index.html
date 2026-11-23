@@ -103,6 +103,7 @@ details summary{cursor:pointer;color:var(--frost);font-size:.9rem}
 .lang button{background:none;border:0;border-radius:999px;padding:6px 12px;font-weight:700;font-size:.85rem;color:var(--frost)}
 .lang button[aria-pressed="true"]{background:var(--lamp);color:#2a1d00}
 header{padding-top:28px}
+.evbar{padding:12px 14px;display:grid;gap:6px}
 </style>
 </head>
 <body>
@@ -119,6 +120,15 @@ header{padding-top:28px}
     <h1 data-i18n="title"></h1>
     <p class="sub" data-i18n="subtitle"></p>
   </header>
+
+  <div class="card evbar">
+    <label for="evSelect" class="lbl" data-i18n="events"></label>
+    <div class="row">
+      <select id="evSelect" style="flex:1;min-width:160px"></select>
+      <button class="btn" id="evNew" type="button" data-i18n="newEvent"></button>
+    </div>
+    <div><button class="btn small danger" id="resetBtn" type="button" data-i18n="reset"></button></div>
+  </div>
 
   <div id="fileWarn" class="msg warn" data-i18n="fileWarn" hidden></div>
 
@@ -183,9 +193,8 @@ header{padding-top:28px}
     <h2><span class="n">5</span><span data-i18n="s5"></span></h2>
     <p class="hint" data-i18n="s5hint"></p>
     <div class="links" id="links"></div>
-    <div class="row" style="margin-top:16px;justify-content:space-between">
+    <div class="row" style="margin-top:16px">
       <button class="btn small" id="redrawBtn" type="button" data-i18n="redraw"></button>
-      <button class="btn small danger" id="resetBtn" type="button" data-i18n="reset"></button>
     </div>
     <details style="margin-top:14px">
       <summary data-i18n="lostQ"></summary>
@@ -279,9 +288,10 @@ fr:{
   copied:n=>`Lien de ${n} copié`,
   shareText:(n,t,u)=>`🎅 ${n}, voici ton lien pour le père Noël secret${t?' « '+t+' »':''} ! Ouvre-le quand tu es seul·e : ${u}`,
   mailSubject:'Ton père Noël secret 🎅',
-  redraw:'🔄 Refaire le tirage', reset:'Tout effacer',
+  redraw:'🔄 Refaire le tirage', reset:'🗑 Supprimer cet événement',
+  events:'Mes événements', newEvent:'➕ Nouvel événement', untitled:n=>`Événement ${n}`,
   confirmRedraw:'Refaire le tirage ? Les liens déjà envoyés ne seront plus valables.',
-  confirmReset:'Tout effacer (participants, exclusions, tirage) ?',
+  confirmReset:n=>`Supprimer « ${n} » (participants, exclusions, tirage) ? Les liens déjà envoyés continueront de marcher, mais tu ne pourras plus les renvoyer d'ici.`,
   lostQ:'Quelqu\'un a perdu son lien ?',
   lostA:'Pas de souci : reviens sur cette page depuis le même appareil et renvoie-lui son lien, il est mémorisé ici. Si tu changes les participants ou les exclusions, il faut refaire le tirage et renvoyer tous les liens.',
   foot:'Tout est enregistré dans ton navigateur uniquement. Aucune donnée n\'est envoyée sur un serveur.',
@@ -320,9 +330,10 @@ de:{
   copied:n=>`Link für ${n} kopiert`,
   shareText:(n,t,u)=>`🎅 ${n}, hier ist dein Wichtel-Link${t?' für «'+t+'»':''}! Öffne ihn, wenn du allein bist: ${u}`,
   mailSubject:'Dein Wichtel-Link 🎅',
-  redraw:'🔄 Neu auslosen', reset:'Alles löschen',
+  redraw:'🔄 Neu auslosen', reset:'🗑 Diesen Anlass löschen',
+  events:'Meine Anlässe', newEvent:'➕ Neuer Anlass', untitled:n=>`Anlass ${n}`,
   confirmRedraw:'Neu auslosen? Bereits verschickte Links sind dann nicht mehr gültig.',
-  confirmReset:'Alles löschen (Teilnehmende, Ausschlüsse, Auslosung)?',
+  confirmReset:n=>`«${n}» löschen (Teilnehmende, Ausschlüsse, Auslosung)? Bereits verschickte Links funktionieren weiter, aber du kannst sie hier nicht mehr erneut verschicken.`,
   lostQ:'Hat jemand seinen Link verloren?',
   lostA:'Kein Problem: Öffne diese Seite auf demselben Gerät und schicke den Link nochmals, er ist hier gespeichert. Wenn du Teilnehmende oder Ausschlüsse änderst, musst du neu auslosen und alle Links nochmals verschicken.',
   foot:'Alles wird nur in deinem Browser gespeichert. Es werden keine Daten an einen Server geschickt.',
@@ -389,10 +400,37 @@ function decode(str){
 }
 
 /* ---------- état ---------- */
-let state = { ev:{title:'',date:'',time:'',budget:'',place:'',themeOn:false,theme:'',msg:''}, people:[], excl:[], loop:false, links:null, sent:{} };
+const KEY2 = 'pereNoelSecret.v2';
+const blank = () => ({ ev:{title:'',date:'',time:'',budget:'',place:'',themeOn:false,theme:'',msg:''}, people:[], excl:[], loop:false, links:null, sent:{} });
+let store = null;   // { current:id, order:[id…], events:{id:state} }
+let state = blank();
+const newId = () => 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 let drawMsgKey = null; // message de statut du tirage (traduit à la volée)
-function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)); if(s) state=Object.assign(state,s); }catch(e){} }
-function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
+function load(){
+  try{ store=JSON.parse(localStorage.getItem(KEY2)); }catch(e){ store=null; }
+  if(!store||!store.events||!store.order||!store.order.length){
+    // première visite après la mise à jour : on reprend l'ancien tirage (v1) comme premier événement.
+    // L'ancienne sauvegarde n'est pas effacée, elle reste comme copie de secours.
+    const id=newId(); let old=null;
+    try{ old=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+    store={current:id, order:[id], events:{[id]:Object.assign(blank(),old||{})}};
+    try{ localStorage.setItem(KEY2,JSON.stringify(store)); }catch(e){}
+  }
+  if(!store.events[store.current]) store.current=store.order[0];
+  state=Object.assign(blank(),store.events[store.current]);
+}
+function save(){ store.events[store.current]=state; try{ localStorage.setItem(KEY2,JSON.stringify(store)); }catch(e){} }
+function evName(id,i){ const e=store.events[id]; return (e.ev&&e.ev.title.trim())||T('untitled')(i+1); }
+function renderEvSelect(){
+  $('evSelect').innerHTML=store.order.map((id,i)=>`<option value="${id}">${esc(evName(id,i))}${store.events[id].links?' ✓':''}</option>`).join('');
+  $('evSelect').value=store.current;
+}
+function switchEvent(id){
+  save(); store.current=id; state=Object.assign(blank(),store.events[id]); save();
+  drawMsgKey=null; $('peopleMsg').innerHTML='';
+  fillForm(); renderEvSelect(); renderPeople(); renderDrawMsg(); renderLinks();
+  scrollTo({top:0,behavior:'smooth'});
+}
 
 /* ---------- tirage ---------- */
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
@@ -472,6 +510,7 @@ function renderExcl(){
   });
 }
 function renderLinks(){
+  if(store) renderEvSelect();
   const sec=$('secLinks');
   if(!state.links){ sec.hidden=true; $('drawBtn').hidden=false; return; }
   sec.hidden=false; $('drawBtn').hidden=true;
@@ -508,16 +547,21 @@ function invalidate(){
   if(state.links){ state.links=null; state.sent={}; setDrawMsg('warn','changed'); renderLinks(); }
 }
 
-function bindEvent(){
-  const map={evTitle:'title',evDate:'date',evTime:'time',evBudget:'budget',evPlace:'place',evTheme:'theme',evMsg:'msg'};
-  for(const [id,k] of Object.entries(map)){
-    $(id).value=state.ev[k]||'';
-    $(id).addEventListener('input',()=>{ state.ev[k]=$(id).value; if(state.links) needResend(); save(); });
-  }
+const FIELDS={evTitle:'title',evDate:'date',evTime:'time',evBudget:'budget',evPlace:'place',evTheme:'theme',evMsg:'msg'};
+function fillForm(){
+  for(const [id,k] of Object.entries(FIELDS)) $(id).value=state.ev[k]||'';
   $('evThemeOn').checked=!!state.ev.themeOn; $('themeField').hidden=!state.ev.themeOn;
-  $('evThemeOn').onchange=()=>{ state.ev.themeOn=$('evThemeOn').checked; $('themeField').hidden=!state.ev.themeOn; if(state.links) needResend(); save(); };
   $('optLoop').checked=!!state.loop;
+}
+function bindEvent(){
+  for(const [id,k] of Object.entries(FIELDS)){
+    $(id).addEventListener('input',()=>{ state.ev[k]=$(id).value; if(state.links) needResend(); save(); if(k==='title') renderEvSelect(); });
+  }
+  $('evThemeOn').onchange=()=>{ state.ev.themeOn=$('evThemeOn').checked; $('themeField').hidden=!state.ev.themeOn; if(state.links) needResend(); save(); };
   $('optLoop').onchange=()=>{ state.loop=$('optLoop').checked; invalidate(); save(); };
+  $('evSelect').onchange=()=>switchEvent($('evSelect').value);
+  $('evNew').onclick=()=>{ const id=newId(); store.events[id]=blank(); store.order.push(id); switchEvent(id); $('evTitle').focus(); };
+  fillForm();
 }
 // infos (ou langue) modifiées après tirage : on régénère les liens avec les mêmes paires
 function needResend(){
@@ -537,9 +581,9 @@ function initOrga(){
   lang = getSavedLang() || ((navigator.language||'').startsWith('de')?'de':'fr');
   $('orga').hidden=false; applyStatic(); document.title=T('pageTitle');
   if(location.protocol==='file:') $('fileWarn').hidden=false;
-  bindEvent(); renderPeople(); renderLinks();
+  bindEvent(); renderEvSelect(); renderPeople(); renderLinks();
   onLang = ()=>{
-    document.title=T('pageTitle'); renderPeople(); renderDrawMsg();
+    document.title=T('pageTitle'); renderEvSelect(); renderPeople(); renderDrawMsg();
     // les liens embarquent la langue par défaut des participants : on les met à jour sans changer le tirage
     if(state.links){ const pairs={}; for(const p of state.people) pairs[p]=decode(state.links[p]).r; makeLinks(pairs); save(); }
     renderLinks();
@@ -573,7 +617,15 @@ function initOrga(){
   };
   $('drawBtn').onclick=doDraw;
   $('redrawBtn').onclick=()=>{ if(confirm(T('confirmRedraw'))){ state.links=null; state.sent={}; doDraw(); } };
-  $('resetBtn').onclick=()=>{ if(confirm(T('confirmReset'))){ try{localStorage.removeItem(KEY);}catch(e){} location.reload(); } };
+  $('resetBtn').onclick=()=>{
+    const i=store.order.indexOf(store.current);
+    if(!confirm(T('confirmReset')(evName(store.current,i)))) return;
+    delete store.events[store.current]; store.order.splice(i,1);
+    if(!store.order.length){ const id=newId(); store.events[id]=blank(); store.order.push(id); }
+    store.current=store.order[Math.max(0,i-1)];
+    state=Object.assign(blank(),store.events[store.current]); save();
+    drawMsgKey=null; fillForm(); renderEvSelect(); renderPeople(); renderDrawMsg(); renderLinks();
+  };
 }
 function doDraw(){
   const people=state.people;
