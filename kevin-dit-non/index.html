@@ -250,6 +250,19 @@ button.die { appearance: none; cursor: pointer; width: 84px; height: 84px; paddi
 @keyframes hop { 0% { transform: translateY(-14px) scale(1.25); } 60% { transform: translateY(2px); } 100% { transform: none; } }
 .cell.land { animation: land 1s ease-out; }
 @keyframes land { 0%, 60% { box-shadow: 0 0 0 5px var(--d-noir); } 100% { box-shadow: none; } }
+/* ---- plein écran + zoom ---- */
+.board-tools { justify-content: flex-end; gap: 8px; }
+.board-vp { overflow: hidden; border-radius: var(--d-radius-s); position: relative; }
+.board { transform-origin: 0 0; transition: transform .45s ease-in-out; }
+.board-vp.zoomed { box-shadow: inset 0 0 0 3px var(--d-rot); }
+#gameStage:fullscreen, #gameStage.pseudo-full { background: var(--d-blanc); max-width: none; width: 100%; height: 100%; padding: 16px 20px; overflow: auto; grid-template-columns: minmax(0, 1fr) 320px; }
+#gameStage.pseudo-full { position: fixed; inset: 0; z-index: 50; }
+#gameStage:fullscreen .scene, #gameStage.pseudo-full .scene { border: 0; padding: 0; }
+#gameStage:fullscreen .cell, #gameStage.pseudo-full .cell { min-height: calc((100vh - 150px) / 6); }
+#gameStage:fullscreen .cell .cat, #gameStage.pseudo-full .cell .cat { font-size: 2rem; }
+#gameStage:fullscreen .cell .lab, #gameStage.pseudo-full .cell .lab { font-size: 1.05rem; }
+#gameStage:fullscreen .pawn, #gameStage.pseudo-full .pawn { width: 30px; height: 30px; font-size: .95rem; }
+#gameStage:fullscreen .legend, #gameStage.pseudo-full .legend { display: none; }
 </style>
 
 <!-- 1. EN-TÊTE -->
@@ -332,9 +345,13 @@ button.die { appearance: none; cursor: pointer; width: 84px; height: 84px; paddi
         <ol><li>Lance le dé et clique sur « Stop ! ».</li><li>Relève le défi de la case.</li><li>Bonne réponse&nbsp;: tu restes. Mauvaise réponse&nbsp;: tu recules&nbsp;!</li><li>La première équipe à l’arrivée gagne.</li></ol>
       </div>
     </div>
-    <div class="d-wrap d-stage">
+    <div class="d-wrap d-stage" id="gameStage">
       <section aria-label="Plateau" class="scene">
-        <div class="board" id="board"></div>
+        <div class="d-row board-tools">
+          <button type="button" class="d-btn d-btn--ghost d-btn--small" id="btnFull" aria-pressed="false">Plein écran</button>
+          <button type="button" class="d-btn d-btn--ghost d-btn--small" id="btnZoom" aria-pressed="true">Zoom sur le pion : oui</button>
+        </div>
+        <div class="board-vp" id="boardVp"><div class="board" id="board"></div></div>
         <div class="legend">
           <span><i class="sw c-N">N</i> Kevin dit non</span>
           <span><i class="sw c-T">T</i> Transforme</span>
@@ -742,7 +759,7 @@ Fais une phrase avec « ne… plus jamais ».`.split('\n');
   const decks = {};
   const pick = c => { if (!decks[c] || !decks[c].length) decks[c] = shuffle(DECK[c]()); return decks[c].pop(); };
   const TEAMC = ['var(--d-gelb)', 'var(--d-blau)', 'var(--d-gruen)', 'var(--d-pink)', 'var(--d-orange)', 'var(--d-gris2)'];
-  const g = { teams: [], cur: 0, phase: 'idle', from: 0, pend: null, hop: false, spin: null };
+  const g = { teams: [], cur: 0, phase: 'idle', from: 0, pend: null, hop: false, spin: null, zoom: true };
 
   function cellPos(i) { const r = Math.floor(i / 7), c = r % 2 === 0 ? i % 7 : 6 - (i % 7); return { r: r + 1, c: c + 1 }; }
   function drawBoard() {
@@ -767,6 +784,33 @@ Fais une phrase avec « ne… plus jamais ».`.split('\n');
   }
   const log = s => { $('log').innerHTML = nb(s); };
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // ---- zoom sur le pion
+  const ZOOM = 2;
+  function zoomTo(i) {
+    const b = $('board'), vp = $('boardVp');
+    if (!g.zoom || !b) return;
+    const c = b.querySelector('.cell[data-i="' + i + '"]'); if (!c) return;
+    const W = vp.clientWidth, H = vp.clientHeight;
+    const cx = c.offsetLeft + c.offsetWidth / 2, cy = c.offsetTop + c.offsetHeight / 2;
+    let tx = W / 2 - cx * ZOOM, ty = H / 2 - cy * ZOOM;
+    tx = Math.min(0, Math.max(W - b.offsetWidth * ZOOM, tx));
+    ty = Math.min(0, Math.max(H - b.offsetHeight * ZOOM, ty));
+    b.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + ZOOM + ')';
+    vp.classList.add('zoomed');
+  }
+  function zoomOut() { const b = $('board'); if (b) b.style.transform = ''; $('boardVp').classList.remove('zoomed'); }
+  // ---- plein écran
+  function toggleFull() {
+    const el = $('gameStage');
+    if (!document.fullscreenElement) { (el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).catch(() => el.classList.toggle('pseudo-full')); }
+    else document.exitFullscreen();
+  }
+  document.addEventListener('fullscreenchange', () => {
+    const on = !!document.fullscreenElement;
+    $('btnFull').textContent = on ? 'Quitter le plein écran' : 'Plein écran';
+    $('btnFull').setAttribute('aria-pressed', String(on));
+    zoomOut();
+  });
   // hasard cryptographique : le résultat ne dépend ni du moment du clic ni de la face affichée
   const d6 = () => { const a = new Uint32Array(1); let x; do { crypto.getRandomValues(a); x = a[0]; } while (x >= 4294967292); return 1 + (x % 6); };
   const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
@@ -791,6 +835,7 @@ Fais une phrase avec « ne… plus jamais ».`.split('\n');
   }
 
   function readyToRoll() {
+    zoomOut();
     g.phase = 'idle'; setStep(0);
     $('btnRoll').hidden = false; $('btnRoll').disabled = false; $('btnRoll').textContent = 'Lancer le dé';
     $('btnNextTeam').hidden = true; $('btnBackCard').hidden = true;
@@ -842,9 +887,10 @@ Fais une phrase avec « ne… plus jamais ».`.split('\n');
   // ---- le pion avance case par case
   async function walk(target, ms) {
     const t = g.teams[g.cur];
+    zoomTo(t.pos); await sleep(g.zoom ? 550 : 0);
     while (t.pos !== target) {
       t.pos += target > t.pos ? 1 : -1;
-      g.hop = true; drawTeams(); focusCell(t.pos);
+      g.hop = true; drawTeams(); focusCell(t.pos); zoomTo(t.pos);
       $('log').innerHTML = 'Équipe ' + (g.cur + 1) + ' → case <b>' + t.pos + '</b>';
       await sleep(ms);
     }
@@ -872,12 +918,13 @@ Fais une phrase avec « ne… plus jamais ».`.split('\n');
     card_(catOf(i));
   }
 
-  function endTurn() { g.phase = 'end'; setStep(3); $('btnNextTeam').hidden = false; $('btnNextTeam').focus(); }
+  function endTurn() { zoomOut(); g.phase = 'end'; setStep(3); $('btnNextTeam').hidden = false; $('btnNextTeam').focus(); }
 
   function openCard() { const dl = $('dlgCard'); dl.showModal ? dl.showModal() : dl.setAttribute('open', ''); }
   function closeCard() { const dl = $('dlgCard'); dl.close ? dl.close() : dl.removeAttribute('open'); }
 
   function card_(c, final) {
+    zoomOut();
     g.phase = 'card'; setStep(2);
     const q = pick(c); g.pend = { final };
     $('cardCat').innerHTML = '<span class="sw c-' + c + '">' + c + '</span> ' + esc(CAT[c]) + (final ? ' · défi final' : '');
@@ -905,6 +952,12 @@ Fais une phrase avec « ne… plus jamais ».`.split('\n');
   }
 
   $('btnStart').addEventListener('click', start);
+  $('btnFull').addEventListener('click', toggleFull);
+  $('btnZoom').addEventListener('click', () => {
+    g.zoom = !g.zoom; if (!g.zoom) zoomOut();
+    $('btnZoom').textContent = 'Zoom sur le pion : ' + (g.zoom ? 'oui' : 'non');
+    $('btnZoom').setAttribute('aria-pressed', String(g.zoom));
+  });
   $('btnRoll').addEventListener('click', rollClick);
   $('die').addEventListener('click', () => { if (g.phase === 'spin') stopDie(); else if (g.phase === 'idle') rollClick(); });
   $('btnNextTeam').addEventListener('click', nextTeam);
