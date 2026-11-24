@@ -1,0 +1,929 @@
+<title>Kevin dit non</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,300;0,400;0,700;1,300&display=swap">
+<style>
+/* =====================================================================
+   DIDAC · LAYOUT ACTIVITÉS HTML  (v1 · octobre 2026)
+   Charte : didac_Visual_Identity_DE.pdf
+   Structure : en-tête blanc (logo + surtitre + titre + ligne IT)
+               → bandeau de consigne → zone d'activité (scène + panneau)
+               → pied de page magenta (logo blanc, claim, adresse).
+   Thème clair unique, voulu : la charte est pensée sur fond blanc.
+   ===================================================================== */
+:root {
+  color-scheme: light;
+  /* Primaires */
+  --d-rot: #88004A;
+  --d-noir: #000000;
+  --d-blanc: #FFFFFF;
+  /* Gris */
+  --d-gris1: #DADADA;
+  --d-gris2: #B2B2B2;
+  --d-gris3: #878787;
+  --d-gris4: #575757;
+  /* Secondaires : SURFACES uniquement, toujours avec texte noir */
+  --d-gelb: #F5C300;
+  --d-orange: #F07D00;
+  --d-blau: #29B8D8;
+  --d-gruen: #8CC63F;
+  --d-pink: #E8507A;
+  /* Fond de page : blanc */
+  --d-bg: #FFFFFF;
+  --d-fg: #000000;
+  --d-line: #DADADA;
+
+  /* Typo : Bold titres · Regular éléments fonctionnels · Light texte */
+  --d-font: "Atkinson Hyperlegible Next", Verdana, "DejaVu Sans", sans-serif;
+  --d-t-hero: clamp(1.9rem, 1.2rem + 2.4vw, 3rem);
+  --d-t-h2: clamp(1.25rem, 1rem + .8vw, 1.6rem);
+  --d-t-body: 1.0625rem;
+  --d-t-small: .9375rem;
+  --d-t-micro: .8125rem;
+
+  --d-radius: 14px;
+  --d-radius-s: 8px;
+  --d-gap: clamp(14px, 1.6vw, 24px);
+  --d-maxw: 1360px;
+}
+body {
+  background: var(--d-bg);
+  color: var(--d-fg);
+  font-family: var(--d-font);
+  font-weight: 300;
+  font-size: var(--d-t-body);
+  line-height: 1.45;
+}
+.d-wrap {
+  max-width: var(--d-maxw);
+  margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+[hidden] { display: none !important; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--d-noir); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------- En-tête ---------- */
+.d-header { border-bottom: 1px solid var(--d-line); background: var(--d-blanc); }
+.d-header .d-wrap {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px;
+  padding-block: 18px 16px;
+}
+.d-logo { display: block; height: 40px; width: auto; flex: none; }
+.d-heading { flex: 1 1 320px; min-width: 0; display: grid; gap: 4px; }
+.d-surtitre { font-weight: 400; font-size: var(--d-t-small); color: var(--d-gris4); letter-spacing: .02em; }
+.d-title { font-weight: 700; font-size: var(--d-t-hero); line-height: 1.05; color: var(--d-rot); }
+.d-header-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* ---------- Ligne italienne ---------- */
+.d-it { display: flex; align-items: baseline; gap: 8px; font-size: var(--d-t-small); font-style: italic; font-weight: 300; color: var(--d-gris4); }
+.d-it::before {
+  content: "IT"; flex: none; font-style: normal; font-weight: 700; font-size: .75rem; color: var(--d-noir);
+  background: var(--d-gruen); border-radius: 4px; padding: 1px 6px; letter-spacing: .04em;
+}
+.d-it:empty { display: none; }
+.d-on-rot .d-it, .d-on-rot.d-it { color: var(--d-blanc); }
+
+/* ---------- Consigne ---------- */
+.d-consigne { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; padding-block: 14px; }
+.d-consigne ol { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0; padding: 0; list-style: none; counter-reset: c; }
+.d-consigne li { counter-increment: c; display: flex; gap: 8px; align-items: baseline; }
+.d-consigne li::before {
+  content: counter(c); font-weight: 700; font-size: var(--d-t-micro); color: var(--d-blanc); background: var(--d-rot);
+  width: 1.6em; height: 1.6em; border-radius: 50%; display: inline-grid; place-items: center; flex: none; transform: translateY(-1px);
+}
+
+/* ---------- Zone d'activité ---------- */
+.d-stage { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--d-gap); align-items: start; padding-block: 8px 32px; }
+.d-stage > * { min-width: 0; }
+@media (max-width: 980px) { .d-stage { grid-template-columns: minmax(0, 1fr); } }
+.d-panel { display: grid; gap: 14px; }
+.d-section { border: 1px solid var(--d-line); border-radius: var(--d-radius); padding: 16px; background: var(--d-blanc); display: grid; gap: 12px; }
+.d-section-title { font-weight: 400; font-size: var(--d-t-micro); letter-spacing: .08em; text-transform: uppercase; color: var(--d-gris4); }
+
+/* ---------- Boutons ---------- */
+.d-btn {
+  appearance: none; border: 2px solid var(--d-rot); background: var(--d-rot); color: var(--d-blanc);
+  font-weight: 700; font-size: var(--d-t-small); padding: 10px 16px; border-radius: 999px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; line-height: 1.1; text-align: center;
+}
+.d-btn:hover { background: #6d003b; border-color: #6d003b; }
+.d-btn[disabled] { background: var(--d-gris1); border-color: var(--d-gris1); color: var(--d-gris4); cursor: not-allowed; }
+.d-btn--ghost { background: var(--d-blanc); color: var(--d-rot); }
+.d-btn--ghost:hover { background: var(--d-gris1); border-color: var(--d-rot); }
+.d-btn--black { background: var(--d-noir); border-color: var(--d-noir); }
+.d-btn--black:hover { background: var(--d-gris4); border-color: var(--d-gris4); }
+.d-btn--small { padding: 6px 12px; font-size: var(--d-t-micro); }
+
+/* Sélecteur segmenté (ex. modes de jeu) */
+.d-seg { display: inline-flex; border: 2px solid var(--d-rot); border-radius: 999px; padding: 2px; gap: 2px; background: var(--d-blanc); }
+.d-seg button { appearance: none; border: 0; background: transparent; color: var(--d-rot); font-weight: 400; font-size: var(--d-t-small); padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+.d-seg button[aria-pressed="true"] { background: var(--d-rot); color: var(--d-blanc); font-weight: 700; }
+
+/* ---------- Encadrés (surface couleur + texte noir + libellé) ---------- */
+.d-box { border-radius: var(--d-radius-s); padding: 12px 14px; color: var(--d-noir); font-weight: 400; }
+.d-box b { font-weight: 700; }
+.d-box--astuce { background: var(--d-blau); }
+.d-box--question { background: var(--d-gelb); }
+.d-box--info { background: var(--d-gris1); }
+
+/* ---------- Boîte de dialogue ---------- */
+.d-dialog { border: 0; padding: 0; border-radius: 18px; width: min(680px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); background: var(--d-blanc); color: var(--d-noir); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.d-dialog::backdrop { background: rgba(0,0,0,.55); }
+.d-dialog-body { padding: 22px; display: grid; gap: 14px; }
+.d-dialog h2 { font-weight: 700; font-size: var(--d-t-h2); color: var(--d-rot); }
+.d-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* ---------- Pied de page ---------- */
+.d-footer { background: var(--d-rot); color: var(--d-blanc); }
+.d-footer-band { display: block; width: 100%; height: 8px; object-fit: fill; }
+.d-footer .d-wrap { display: flex; flex-wrap: wrap; gap: 14px 32px; align-items: flex-end; justify-content: space-between; padding-block: 22px; }
+.d-brand { display: flex; align-items: flex-end; gap: 18px; }
+.d-brand img { height: 32px; width: auto; display: block; }
+.d-claim { font-weight: 700; font-size: 1.05rem; line-height: 1; padding-bottom: 1px; }
+.d-address { font-weight: 400; font-size: var(--d-t-micro); }
+.d-credit { font-weight: 300; font-size: var(--d-t-micro); color: var(--d-gris1); }
+.d-credit a { color: inherit; }
+.d-icon { width: 2.5rem; height: 2.5rem; flex: none; }
+.d-cta { font-weight: 700; font-size: var(--d-t-h2); }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* ---- Styles propres à l'activité : à écrire ici, à partir des variables --d-* ---- */
+.scene { display: grid; gap: 14px; border: 1px solid var(--d-line); border-radius: var(--d-radius); padding: clamp(14px, 2vw, 24px); background: var(--d-blanc); }
+.lvl-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 8px; }
+.lvl-title { font-weight: 700; font-size: var(--d-t-h2); color: var(--d-rot); }
+.count { font-weight: 400; font-size: var(--d-t-small); color: var(--d-gris4); }
+.prog { height: 8px; background: var(--d-gris1); border-radius: 999px; overflow: hidden; }
+.prog span { display: block; height: 100%; background: var(--d-rot); transition: width .3s; }
+.card { display: grid; gap: 14px; min-height: 260px; align-content: start; }
+.bubble { border-radius: var(--d-radius); padding: 12px 16px; display: grid; gap: 6px; color: var(--d-noir); }
+.bubble p { margin: 0; font-weight: 400; font-size: 1.25rem; }
+.bubble .who { font-weight: 700; font-size: var(--d-t-micro); text-transform: uppercase; letter-spacing: .06em; }
+.laurent { background: var(--d-gris1); max-width: 640px; }
+.thibaut { border: 2px solid var(--d-rot); margin-left: clamp(0px, 6vw, 60px); }
+.thibaut .who { color: var(--d-rot); }
+.opts { display: grid; gap: 10px; margin-left: clamp(0px, 6vw, 60px); }
+.opt { appearance: none; text-align: left; display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 2px solid var(--d-gris2); border-radius: var(--d-radius-s); background: var(--d-blanc); color: var(--d-noir); font-weight: 400; font-size: 1.1rem; cursor: pointer; }
+.opt:hover:not([disabled]) { border-color: var(--d-rot); }
+.opt[aria-checked="true"] { border-color: var(--d-rot); box-shadow: inset 0 0 0 2px var(--d-rot); }
+.opt .letter { flex: none; width: 1.8em; height: 1.8em; display: grid; place-items: center; border-radius: 50%; background: var(--d-rot); color: var(--d-blanc); font-weight: 700; font-size: var(--d-t-micro); }
+.opt.good { background: var(--d-gruen); border-color: var(--d-noir); }
+.opt.good::after { content: "✔ bonne réponse"; margin-left: auto; font-weight: 700; font-size: var(--d-t-micro); }
+.opt.bad { background: var(--d-pink); border-color: var(--d-noir); }
+.opt.bad::after { content: "✘ ton choix"; margin-left: auto; font-weight: 700; font-size: var(--d-t-micro); }
+.opt[disabled] { cursor: default; }
+.build { min-height: 2.6rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.build.good { background: var(--d-gruen); border-radius: var(--d-radius-s); padding: 6px; }
+.ph { color: var(--d-gris4); font-style: italic; }
+.pool { display: flex; flex-wrap: wrap; gap: 10px; }
+.word { appearance: none; border: 2px solid var(--d-noir); background: var(--d-gelb); color: var(--d-noir); font-weight: 400; font-size: 1.1rem; padding: 8px 14px; border-radius: var(--d-radius-s); cursor: pointer; }
+.word:hover { background: var(--d-orange); }
+.word.placed { background: var(--d-blanc); border-color: var(--d-rot); cursor: default; }
+.lbl { font-weight: 400; }
+#btnUndo { justify-self: start; }
+.chip { display: inline-block; background: var(--d-blau); color: var(--d-noir); font-weight: 700; border-radius: 6px; padding: 1px 8px; }
+#ans { width: 100%; border: 0; border-bottom: 2px solid var(--d-gris2); padding: 6px 2px; font-size: 1.2rem; font-weight: 400; background: transparent; }
+#ans:focus { outline: none; border-bottom-color: var(--d-rot); }
+.keys { gap: 6px; }
+.fb { border-radius: var(--d-radius-s); padding: 12px 14px; color: var(--d-noir); font-weight: 400; }
+.fb.ok { background: var(--d-gruen); }
+.fb.ko { background: var(--d-pink); }
+.actions { justify-content: flex-end; }
+.end { display: grid; gap: 12px; justify-items: start; }
+.end h3 { margin: 0; font-weight: 700; font-size: var(--d-t-h2); color: var(--d-rot); }
+.end p { margin: 0; }
+.scores { display: grid; gap: 10px; }
+.sc-top { display: flex; justify-content: space-between; font-weight: 400; }
+.bar { height: 10px; border-radius: 999px; background: var(--d-gris1); overflow: hidden; margin-top: 4px; }
+.bar span { display: block; height: 100%; background: var(--d-rot); }
+.sc-best { font-size: var(--d-t-micro); color: var(--d-gris4); font-weight: 400; }
+.total { font-weight: 400; }
+.memo { width: 100%; border-collapse: collapse; font-size: var(--d-t-small); }
+.memo th { text-align: left; font-weight: 700; background: var(--d-gris1); padding: 6px 8px; }
+.memo td { padding: 5px 8px; border-top: 1px solid var(--d-line); vertical-align: top; }
+/* ---- Jeu de l'oie ---- */
+.board { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(6, auto); gap: 6px; }
+.cell { position: relative; border-radius: var(--d-radius-s); min-height: 78px; padding: 6px; display: grid; grid-template-rows: auto 1fr auto; gap: 2px; color: var(--d-noir); border: 2px solid transparent; }
+.cell .num { font-weight: 700; font-size: var(--d-t-micro); }
+.cell .lab { font-weight: 700; font-size: .85rem; line-height: 1.1; display: grid; align-content: center; }
+.cell .lab small { font-weight: 400; font-size: .7rem; }
+.cell .cat { font-size: 1.3rem; justify-self: center; }
+.cell .pawns { display: flex; flex-wrap: wrap; gap: 2px; min-height: 22px; }
+.cell.here { border-color: var(--d-noir); box-shadow: 0 0 0 2px var(--d-blanc) inset; }
+.c-N { background: var(--d-blau); } .c-T { background: var(--d-gelb); } .c-C { background: var(--d-pink); } .c-P { background: var(--d-gruen); }
+.c-S { background: var(--d-rot); color: var(--d-blanc); }
+.pawn { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--d-noir); color: var(--d-noir); font-weight: 700; font-size: .75rem; }
+.pawn.big { width: 34px; height: 34px; font-size: 1rem; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: var(--d-t-small); font-weight: 400; }
+.sw { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 6px; font-style: normal; font-weight: 700; color: var(--d-noir); margin-right: 4px; }
+.sw.c-S { color: var(--d-blanc); }
+.turn { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: var(--d-t-h2); }
+.dice-row { display: flex; align-items: center; gap: 14px; }
+.die { width: 64px; height: 64px; border: 3px solid var(--d-noir); border-radius: 14px; display: grid; place-items: center; font-weight: 700; font-size: 2rem; background: var(--d-blanc); }
+.log { margin: 0; min-height: 3em; font-weight: 400; }
+.teams { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.teams li { display: flex; align-items: center; gap: 8px; font-weight: 400; padding: 4px 6px; border-radius: 6px; }
+.teams li.cur { background: var(--d-gris1); font-weight: 700; }
+.sel { border: 2px solid var(--d-gris2); border-radius: var(--d-radius-s); padding: 8px; background: var(--d-blanc); }
+.cardcat { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: var(--d-t-h2); color: var(--d-rot); }
+.cardq { margin: 0; font-weight: 400; font-size: 1.35rem; line-height: 1.35; }
+@media (max-width: 560px) { .cell { min-height: 58px; padding: 3px; } .cell .lab { font-size: .62rem; } .cell .lab small { display: none; } .pawn { width: 16px; height: 16px; font-size: .6rem; border-width: 1px; } }
+/* ---- tempo du tour ---- */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; counter-reset: s; }
+.steps li { counter-increment: s; font-size: var(--d-t-micro); font-weight: 400; text-align: center; padding: 6px 2px; border-radius: 6px; background: var(--d-gris1); color: var(--d-noir); }
+.steps li::before { content: counter(s) ". "; font-weight: 700; }
+.steps li.on { background: var(--d-rot); color: var(--d-blanc); font-weight: 700; }
+.steps li.done { background: var(--d-blanc); outline: 1px solid var(--d-gris2); }
+.dice-btns { display: grid; gap: 8px; }
+button.die { appearance: none; cursor: pointer; width: 84px; height: 84px; padding: 10px; border: 3px solid var(--d-noir); border-radius: 16px; background: var(--d-blanc); display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); place-items: center; }
+.pip { width: 13px; height: 13px; border-radius: 50%; }
+.pip.on { background: var(--d-noir); }
+.die.spin { animation: dspin .35s linear infinite; border-color: var(--d-rot); }
+.die.stop { animation: dpop .5s ease-out; box-shadow: 0 0 0 5px var(--d-gelb); }
+@keyframes dspin { 0% { transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(1.08); } 100% { transform: rotate(360deg) scale(1); } }
+@keyframes dpop { 0% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.pawn.hop { animation: hop .4s ease-out; box-shadow: 0 0 0 3px var(--d-blanc), 0 0 0 5px var(--d-noir); }
+@keyframes hop { 0% { transform: translateY(-14px) scale(1.25); } 60% { transform: translateY(2px); } 100% { transform: none; } }
+.cell.land { animation: land 1s ease-out; }
+@keyframes land { 0%, 60% { box-shadow: 0 0 0 5px var(--d-noir); } 100% { box-shadow: none; } }
+</style>
+
+<!-- 1. EN-TÊTE -->
+<header class="d-header">
+  <div class="d-wrap">
+    <img class="d-logo" src="data:image/png;base64,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" alt="didac">
+    <div class="d-heading">
+      <div class="d-surtitre">FrE · Dossier 12 · La négation</div>
+      <h1 class="d-title">Kevin dit non&nbsp;!</h1>
+    </div>
+    <div class="d-header-actions">
+      <div class="d-seg" role="group" aria-label="Mode" id="seg">
+        <button type="button" data-l="0" aria-pressed="true">Niveau 1</button>
+        <button type="button" data-l="1" aria-pressed="false">Niveau 2</button>
+        <button type="button" data-l="2" aria-pressed="false">Niveau 3</button>
+        <button type="button" data-l="g" aria-pressed="false">Jeu de l’oie</button>
+      </div>
+      <button type="button" class="d-btn d-btn--ghost" id="btnRegles">Règles</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ EXERCICES ============ -->
+  <div id="viewEx">
+    <div class="d-wrap">
+      <div class="d-consigne">
+        <ol><li>Lis la question de Laurent.</li><li>Réponds comme Kevin&nbsp;: toujours non&nbsp;!</li><li>Vérifie et lis l’explication.</li><li>Note ton score sur ton dossier.</li></ol>
+      </div>
+    </div>
+    <div class="d-wrap d-stage">
+      <section aria-label="Activité" class="scene">
+        <div class="lvl-head">
+          <div>
+            <div class="d-section-title" id="lvlName">Niveau 1</div>
+            <h2 class="lvl-title" id="lvlTitle"></h2>
+          </div>
+          <div class="count" id="count" aria-live="polite"></div>
+        </div>
+        <div class="prog" aria-hidden="true"><span id="progBar"></span></div>
+        <div id="card" class="card"></div>
+        <div id="feedback" class="fb" role="status" aria-live="polite" hidden></div>
+        <div class="d-row actions">
+          <button type="button" class="d-btn" id="btnCheck">Vérifier</button>
+          <button type="button" class="d-btn d-btn--black" id="btnNext" hidden>Question suivante →</button>
+        </div>
+      </section>
+
+      <aside class="d-panel" aria-label="Outils">
+        <div class="d-section">
+          <div class="d-section-title">Mon score · séries de 10</div>
+          <div class="scores" id="scores"></div>
+          <button type="button" class="d-btn d-btn--ghost" id="btnRestart">Nouvelle série de 10</button>
+        </div>
+        <div class="d-section">
+          <div class="d-section-title">Aide-mémoire</div>
+          <table class="memo">
+            <thead><tr><th scope="col">Question avec…</th><th scope="col">Kevin répond…</th></tr></thead>
+            <tbody>
+              <tr><td>quelque chose, tout</td><td><b>ne… rien</b></td></tr>
+              <tr><td>quelqu’un, tout le monde</td><td><b>ne… personne</b></td></tr>
+              <tr><td>souvent, toujours</td><td><b>ne… jamais</b></td></tr>
+              <tr><td>encore, toujours</td><td><b>ne… plus</b></td></tr>
+              <tr><td>déjà</td><td><b>ne… pas encore</b></td></tr>
+              <tr><td>quelque part</td><td><b>ne… nulle part</b></td></tr>
+              <tr><td>des, quelques</td><td><b>ne… aucun(e)</b></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="d-box d-box--astuce"><b>Astuce&nbsp;:</b> au passé composé, <i>personne</i>, <i>nulle part</i> et <i>aucun</i> se placent <b>après</b> le participe&nbsp;: <i>Je n’ai vu personne.</i></div>
+        <div class="d-box d-box--question"><b>Question&nbsp;:</b> <i>Personne ne m’aime</i> ou <i>Personne ne m’aime pas</i>&nbsp;? Réponse au niveau 1&nbsp;!</div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ============ JEU DE L'OIE ============ -->
+  <div id="viewGame" hidden>
+    <div class="d-wrap">
+      <div class="d-consigne">
+        <ol><li>Lance le dé et clique sur « Stop ! ».</li><li>Relève le défi de la case.</li><li>Bonne réponse&nbsp;: tu restes. Mauvaise réponse&nbsp;: tu recules&nbsp;!</li><li>La première équipe à l’arrivée gagne.</li></ol>
+      </div>
+    </div>
+    <div class="d-wrap d-stage">
+      <section aria-label="Plateau" class="scene">
+        <div class="board" id="board"></div>
+        <div class="legend">
+          <span><i class="sw c-N">N</i> Kevin dit non</span>
+          <span><i class="sw c-T">T</i> Transforme</span>
+          <span><i class="sw c-C">C</i> Corrige l’erreur</span>
+          <span><i class="sw c-P">P</i> À toi de parler</span>
+          <span><i class="sw c-S">★</i> Case spéciale</span>
+        </div>
+      </section>
+      <aside class="d-panel" aria-label="Partie">
+        <div class="d-section" id="setup">
+          <div class="d-section-title">Nouvelle partie</div>
+          <label class="lbl" for="nTeams">Nombre d’équipes</label>
+          <select id="nTeams" class="sel"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select>
+          <button type="button" class="d-btn" id="btnStart">Commencer la partie</button>
+        </div>
+        <div class="d-section" id="play" hidden>
+          <div class="d-section-title">À qui le tour&nbsp;?</div>
+          <div class="turn" id="turn"></div>
+          <ol class="steps" id="steps" aria-label="Étapes du tour"><li>Lancer</li><li>Avancer</li><li>Défi</li><li>Fin du tour</li></ol>
+          <div class="dice-row">
+            <button type="button" class="die" id="die" aria-label="Dé"></button>
+            <div class="dice-btns">
+              <button type="button" class="d-btn" id="btnRoll">Lancer le dé</button>
+              <button type="button" class="d-btn d-btn--black" id="btnNextTeam" hidden>Équipe suivante →</button>
+              <button type="button" class="d-btn d-btn--ghost" id="btnBackCard" hidden>Revoir la carte</button>
+            </div>
+          </div>
+          <p class="log" id="log" role="status" aria-live="polite"></p>
+          <ol class="teams" id="teams"></ol>
+          <button type="button" class="d-btn d-btn--ghost d-btn--small" id="btnNew">Nouvelle partie</button>
+        </div>
+        <div class="d-box d-box--info"><b>Cases spéciales&nbsp;:</b> <b>Oie</b>&nbsp;: avance encore du même nombre · <b>Pont</b>&nbsp;: va à la case 12 · <b>Puits</b> et <b>Prison</b>&nbsp;: passe un tour · <b>Labyrinthe</b>&nbsp;: retour à 22 · <b>Kevin boude</b>&nbsp;: retour à 30.</div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<dialog class="d-dialog" id="dlgCard" aria-labelledby="cardCat">
+  <div class="d-dialog-body">
+    <div class="cardcat" id="cardCat"></div>
+    <div class="d-section-title" id="cardTeam"></div>
+    <p class="cardq" id="cardQ"></p>
+    <div class="d-box d-box--info" id="cardA" hidden></div>
+    <div class="d-row" id="cardBtns1"><button type="button" class="d-btn" id="btnShow">Voir la réponse</button><button type="button" class="d-btn d-btn--ghost" id="btnPeek">Voir le plateau</button></div>
+    <div class="d-row" id="cardBtns2" hidden>
+      <button type="button" class="d-btn" id="btnOk">✔ Réussi</button>
+      <button type="button" class="d-btn d-btn--black" id="btnKo">✘ Raté</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="d-dialog" id="dlgRegles" aria-labelledby="dlgT">
+  <div class="d-dialog-body">
+    <h2 id="dlgT">Règles</h2>
+    <p style="margin:0"><b>Exercices&nbsp;:</b> Kevin n’est jamais content&nbsp;: il répond toujours <b>non</b>. Chaque niveau te donne une série de 10 questions tirées au hasard. Clique sur «&nbsp;Nouvelle série&nbsp;» pour en découvrir d’autres.</p>
+    <ol style="margin:0;padding-left:1.2em;display:grid;gap:6px">
+      <li><b>Niveau 1 · Choisis</b> la bonne réponse de Kevin (30 questions).</li>
+      <li><b>Niveau 2 · Remets dans l’ordre</b> les mots de la phrase (24 phrases).</li>
+      <li><b>Niveau 3 · Écris</b> la phrase à la forme négative (30 phrases).</li>
+    </ol>
+    <p style="margin:0"><b>Jeu de l’oie&nbsp;:</b> en équipes, à l’écran. Lancez le dé, avancez et relevez le défi de la case (N, T, C ou P). L’enseignant·e montre la réponse et clique sur «&nbsp;Réussi&nbsp;» ou «&nbsp;Raté&nbsp;». Raté&nbsp;: l’équipe retourne à sa case de départ. À l’arrivée, il faut réussir un dernier défi pour gagner&nbsp;!</p>
+    <div class="d-row"><button type="button" class="d-btn" id="dlgClose">C’est parti&nbsp;!</button></div>
+  </div>
+</dialog>
+
+<!-- 4. PIED DE PAGE -->
+<footer class="d-footer d-on-rot">
+  <img class="d-footer-band" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAACbAAAAAyCAIAAAAI4PhfAAAACXBIWXMAAC4jAAAuIwF4pT92AAACMUlEQVR4nO3ZoW0CQABA0YMBOhAOyxCYCmpwKCZgIgSu6QgsQ4LpEkcu+Xlvgu//5jYOAyDk/HdfnQAw0/uxugBgqtfzujoBYKb9z3F1AsBM31+n1QkAM112v2OM7eoMAAAAAAAAgE8xRAEAAAAAAIAsQxQAAAAAAADIMkQBAAAAAACALEMUAAAAAAAAyDJEAQAAAAAAgCxDFAAAAAAAAMgyRAEAAAAAAIAsQxQAAAAAAADIMkQBAAAAAACALEMUAAAAAAAAyDJEAQAAAAAAgCxDFAAAAAAAAMgyRAEAAAAAAIAsQxQAAAAAAADIMkQBAAAAAACALEMUAAAAAAAAyDJEAQAAAAAAgCxDFAAAAAAAAMgyRAEAAAAAAIAsQxQAAAAAAADIMkQBAAAAAACALEMUAAAAAAAAyDJEAQAAAAAAgCxDFAAAAAAAAMgyRAEAAAAAAIAsQxQAAAAAAADIMkQBAAAAAACALEMUAAAAAAAAyDJEAQAAAAAAgCxDFAAAAAAAAMgyRAEAAAAAAIAsQxQAAAAAAADIMkQBAAAAAACALEMUAAAAAAAAyDJEAQAAAAAAgCxDFAAAAAAAAMgyRAEAAAAAAIAsQxQAAAAAAADIMkQBAAAAAACALEMUAAAAAAAAyDJEAQAAAAAAgCxDFAAAAAAAAMgyRAEAAAAAAIAsQxQAAAAAAADIMkQBAAAAAACALEMUAAAAAAAAyDJEAQAAAAAAgCxDFAAAAAAAAMj6B2reCmRkoeExAAAAAElFTkSuQmCC" alt="">
+  <div class="d-wrap">
+    <div style="display:grid;gap:6px">
+      <div class="d-cta">À toi&nbsp;! Dis non… correctement&nbsp;!</div>
+    </div>
+    <div style="display:grid;gap:10px;justify-items:start">
+      <div class="d-brand"><img src="data:image/png;base64,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" alt="didac"><span class="d-claim">Ton année. Une longueur d'avance.</span></div>
+      <div class="d-address">Didac Schulen | Effingerstrasse 31 | 3008 Bern</div>
+      <div class="d-credit">Icônes&nbsp;: <a href="https://www.streamlinehq.com">Streamline</a></div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // ---------- Niveau 1 : question | bonne réponse | faux 1 | faux 2 | explication
+  const L1 = `Tu connais quelqu’un ici ?|Non, je ne connais personne.|Non, je ne connais rien.|Non, je connais personne pas.|quelqu’un → ne… personne.
+Tu fais quelque chose ce week-end ?|Non, je ne fais rien.|Non, je ne fais pas rien.|Non, je ne fais personne.|quelque chose → ne… rien, sans « pas ».
+Tu vas souvent au cinéma ?|Non, je ne vais jamais au cinéma.|Non, je vais ne jamais au cinéma.|Non, je ne vais rien au cinéma.|souvent → ne… jamais, autour du verbe conjugué.
+Tu vois encore Grégoire ?|Non, je ne vois plus Grégoire.|Non, je ne vois aucun Grégoire.|Non, je ne vois nulle part Grégoire.|encore → ne… plus (c’est fini).
+Tu as déjà fini ?|Non, je n’ai pas encore fini.|Non, je n’ai déjà pas fini.|Non, je n’ai plus fini.|déjà → ne… pas encore.
+Tu vois mes lunettes quelque part ?|Non, je ne les vois nulle part.|Non, je ne les nulle part vois.|Non, je ne les vois personne.|quelque part → ne… nulle part, après le verbe.
+Tu as des amis dans la région ?|Non, je n’ai aucun ami.|Non, je n’ai aucuns amis.|Non, je n’ai personne ami.|des → ne… aucun(e) + nom au singulier.
+Quelqu’un te téléphone ?|Non, personne ne me téléphone.|Non, personne ne me téléphone pas.|Non, ne personne me téléphone.|Personne ne + verbe, sans « pas » !
+Tout marche bien ?|Non, rien ne marche.|Non, rien ne marche pas.|Non, tout ne marche rien.|Rien ne + verbe, sans « pas » !
+Tu as vu quelqu’un à la fête ?|Non, je n’ai vu personne.|Non, je n’ai personne vu.|Non, je n’ai pas vu personne.|Au passé composé, « personne » se place après le participe.
+Tu as mangé quelque chose ?|Non, je n’ai rien mangé.|Non, je n’ai mangé rien.|Non, je n’ai pas mangé rien.|Au passé composé, « rien » se place avant le participe.
+Vous êtes allés quelque part cet été ?|Non, nous ne sommes allés nulle part.|Non, nous ne sommes nulle part allés.|Non, nous ne sommes pas allés nulle part.|« nulle part » se place après le participe.
+Il a déjà pris l’avion ?|Non, il n’a jamais pris l’avion.|Non, il n’a pris jamais l’avion.|Non, il ne jamais a pris l’avion.|« jamais » se place avant le participe.
+Elle travaille toujours à Bordeaux ?|Non, elle ne travaille plus à Bordeaux.|Non, elle ne travaille rien à Bordeaux.|Non, elle travaille ne plus à Bordeaux.|toujours (= encore) → ne… plus.
+Tu as des frères et sœurs ?|Non, je n’ai pas de frères et sœurs.|Non, je n’ai pas des frères et sœurs.|Non, je n’ai des frères et sœurs pas.|Après la négation, des → de.
+Il boit du café ?|Non, il ne boit pas de café.|Non, il ne boit pas du café.|Non, il boit ne pas de café.|du, de la, des → de après la négation.
+Vous avez une voiture ?|Non, nous n’avons pas de voiture.|Non, nous n’avons pas une voiture.|Non, nous avons pas de voiture.|un, une → de après ne… pas.
+Tu as compris quelque chose ?|Non, je n’ai rien compris.|Non, je n’ai compris rien.|Non, je n’ai pas compris rien.|ne… rien : « rien » avant le participe.
+Quelqu’un est venu ?|Non, personne n’est venu.|Non, personne n’est pas venu.|Non, n’est venu personne.|Personne ne + verbe, sans « pas ».
+Tu habites encore chez tes parents ?|Non, je n’habite plus chez mes parents.|Non, je n’habite jamais chez mes parents.|Non, j’habite ne plus chez mes parents.|encore → ne… plus.
+Ils ont déjà réservé l’hôtel ?|Non, ils n’ont pas encore réservé l’hôtel.|Non, ils n’ont pas réservé encore l’hôtel.|Non, ils n’ont encore pas réservé l’hôtel.|« pas encore » ensemble, avant le participe.
+Tu dis quelque chose ?|Non, je ne dis rien.|Non, je dis rien ne.|Non, je ne dis personne.|quelque chose → ne… rien.
+Il a fait quelques erreurs ?|Non, il n’a fait aucune erreur.|Non, il n’a aucune fait erreur.|Non, il n’a fait aucunes erreurs.|« aucune » après le participe, au singulier.
+Tu veux sortir ce soir ?|Non, je ne veux pas sortir.|Non, je ne pas veux sortir.|Non, je ne veux sortir pas.|Verbe + infinitif : ne… pas autour du verbe conjugué.
+Pourquoi tu pars si tôt ?|Pour ne pas être en retard.|Pour être ne pas en retard.|Pour n’être en retard pas.|Devant un infinitif : ne pas ensemble.
+Tu sors souvent le soir ?|Non, je ne sors jamais.|Non, je ne sors pas jamais.|Non, je sors jamais ne.|Jamais « pas » et « jamais » ensemble.
+Il y a quelqu’un dans la salle ?|Non, il n’y a personne.|Non, il n’y a pas personne.|Non, il y a ne personne.|il y a → il n’y a personne.
+Il y a encore du pain ?|Non, il n’y a plus de pain.|Non, il n’y a plus du pain.|Non, il n’y a jamais du pain.|ne… plus + de.
+Quelque chose t’intéresse ?|Non, rien ne m’intéresse.|Non, rien ne m’intéresse pas.|Non, ne m’intéresse rien.|Rien ne + verbe, sans « pas ».
+Tu vas encore jouer au foot ?|Non, je ne vais plus jouer au foot.|Non, je vais ne plus jouer au foot.|Non, je ne vais jouer plus au foot.|Futur proche : ne… plus autour de « aller ».`
+    .split('\n').map(l => { const p = l.split('|'); return { q: p[0], a: p[1], f: [p[2], p[3]], e: p[4] }; });
+
+  // ---------- Niveau 2 : question = mots dans le bon ordre (séparés par « / »)
+  const L2 = `Tu as mangé quelque chose ?=Je / n’ai / rien / mangé.
+Il a vu quelqu’un ?=Il / n’a / vu / personne.
+Vous êtes allés quelque part ?=Nous / ne / sommes / allés / nulle part.
+Elle a souvent pris l’avion ?=Elle / n’a / jamais / pris / l’avion.
+Pourquoi il se couche tôt ?=Il se couche tôt / pour / ne / pas / être / fatigué.
+Quelqu’un t’a téléphoné ?=Personne / ne / m’a / téléphoné.
+Tu as déjà fini tes devoirs ?=Je / n’ai / pas / encore / fini / mes devoirs.
+Ils ont fait quelques exercices ?=Ils / n’ont / fait / aucun / exercice.
+Tout marche aujourd’hui ?=Rien / ne / marche / aujourd’hui.
+Tu bois du café ?=Je / ne / bois / pas / de / café.
+Vous avez encore du pain ?=Nous / n’avons / plus / de / pain.
+Tu vas souvent au cinéma ?=Je / ne / vais / jamais / au cinéma.
+Elle connaît quelqu’un à Berne ?=Elle / ne / connaît / personne / à Berne.
+Vous vous téléphonez souvent ?=On / ne / se / téléphone / jamais.
+Tu veux sortir ce soir ?=Je / ne / veux / pas / sortir / ce soir.
+Il va encore jouer au foot ?=Il / ne / va / plus / jouer / au foot.
+Nous sommes inscrits quelque part ?=Vous / n’êtes / inscrits / nulle part.
+Tu sais où il travaille ?=Je / n’ai / aucune / idée.
+Il boit souvent quelque chose ?=Il / ne / boit / jamais / rien.
+Tu vois encore Grégoire ?=Je / ne / vois / plus / jamais / Grégoire.
+Quelqu’un est venu à la fête ?=Personne / n’est / venu / à la fête.
+Ils vous ont dit quelque chose ?=Ils / ne / nous / ont / rien / dit.
+Elle fume encore ?=Elle / a décidé de / ne / plus / fumer.
+Tu comprends ce texte ?=Je / ne / comprends / pas du tout / ce texte.`
+    .split('\n').map(l => { const [q, w] = l.split('='); return { q, w: w.split(' / ') }; });
+
+  // ---------- Niveau 3 : phrase positive | négation | réponse(s) acceptée(s) séparées par « ; »
+  const L3 = `J’ai mangé quelque chose.|rien|Je n’ai rien mangé.
+Il va souvent au théâtre.|jamais|Il ne va jamais au théâtre.
+Elle a rencontré quelqu’un.|personne|Elle n’a rencontré personne.
+Nous avons déjà fini.|pas encore|Nous n’avons pas encore fini.
+Tout le monde m’aime.|personne|Personne ne m’aime.
+Ils fument encore.|plus|Ils ne fument plus.
+Tout marche.|rien|Rien ne marche.
+Il a quelques problèmes.|aucun|Il n’a aucun problème.
+Je bois du thé.|pas|Je ne bois pas de thé.
+Elle a des enfants.|pas|Elle n’a pas d’enfants.;Elle n’a pas d’enfant.
+Tu sors souvent.|jamais|Tu ne sors jamais.
+On voit quelqu’un.|personne|On ne voit personne.
+Il a dit quelque chose.|rien|Il n’a rien dit.
+Nous sommes allés quelque part.|nulle part|Nous ne sommes allés nulle part.
+Elle habite encore à Paris.|plus|Elle n’habite plus à Paris.
+J’ai déjà visité Berne.|pas encore|Je n’ai pas encore visité Berne.
+Quelqu’un est venu.|personne|Personne n’est venu.
+Quelque chose m’intéresse.|rien|Rien ne m’intéresse.
+Il veut travailler.|pas|Il ne veut pas travailler.
+Je vais regarder la télé.|pas|Je ne vais pas regarder la télé.
+Je te conseille de fumer.|pas|Je te conseille de ne pas fumer.
+Il a promis de recommencer.|plus|Il a promis de ne plus recommencer.
+Nous avons des questions.|aucune|Nous n’avons aucune question.
+Ils ont trouvé quelque chose.|rien|Ils n’ont rien trouvé.
+Tu connais tout le monde.|personne|Tu ne connais personne.
+Il y a quelqu’un.|personne|Il n’y a personne.
+Il y a encore du lait.|plus|Il n’y a plus de lait.
+Elle lit toujours le journal.|jamais|Elle ne lit jamais le journal.
+J’ai vu ton sac quelque part.|nulle part|Je n’ai vu ton sac nulle part.
+Ils ont fait quelques fautes.|aucune|Ils n’ont fait aucune faute.`
+    .split('\n').map(l => { const p = l.split('|'); return { s: p[0], h: p[1], a: p[2].split(';') }; });
+
+  // ---------- Jeu de l'oie : « Corrige l’erreur » et « À toi de parler »
+  const CORR = `Personne ne m’aime pas.|Personne ne m’aime.
+Je n’ai pas vu personne.|Je n’ai vu personne.
+Rien ne marche pas.|Rien ne marche.
+Je n’ai pas des amis.|Je n’ai pas d’amis.
+Il ne boit pas du café.|Il ne boit pas de café.
+Je n’ai mangé rien.|Je n’ai rien mangé.
+Elle a ne jamais vu la mer.|Elle n’a jamais vu la mer.
+Nous ne sommes nulle part allés.|Nous ne sommes allés nulle part.
+Je ne veux partir pas.|Je ne veux pas partir.
+Il n’a aucuns problèmes.|Il n’a aucun problème.
+Je ne fais pas rien.|Je ne fais rien.
+Pour pas être en retard, je pars tôt.|Pour ne pas être en retard, je pars tôt.
+Je ne vois jamais plus Grégoire.|Je ne vois plus jamais Grégoire.
+Il ne comprend pas jamais.|Il ne comprend jamais.
+Je n’ai pas encore pas fini.|Je n’ai pas encore fini.
+Elle n’a fait aucun erreur.|Elle n’a fait aucune erreur.
+On ne se téléphone pas jamais.|On ne se téléphone jamais.
+Nous n’avons plus du pain.|Nous n’avons plus de pain.
+Ne personne est venu.|Personne n’est venu.
+Je sais pas. (à l’écrit)|Je ne sais pas.`
+    .split('\n').map(l => { const p = l.split('|'); return { q: p[0], a: p[1] }; });
+
+  const PARLE = `Dis 3 choses que tu ne fais jamais le dimanche.
+Dis 2 choses que tu ne fais plus depuis que tu es grand·e.
+Dis une chose que tu n’as pas encore faite cette année.
+Kevin est au restaurant et il n’aime rien : joue Kevin en 2 phrases.
+Réponds non à tout : « Tu as faim ? Tu es fatigué·e ? Tu veux jouer ? »
+Cite 3 endroits où tu n’es jamais allé·e.
+Dis une chose que personne ne sait sur toi.
+Dis 2 choses qui ne marchent jamais le lundi matin.
+Dis une chose que tu ne mangeras plus jamais.
+Rassure Kevin en 2 phrases : « Ne t’inquiète pas, … »
+Dis 2 choses que tu ne veux pas faire ce week-end.
+Raconte ta journée idéale… à la forme négative (3 phrases) !
+Pose une question à une autre équipe : elle doit répondre avec ne… nulle part.
+Pose une question à une autre équipe : elle doit répondre avec ne… aucun(e).
+Fais une phrase avec « ne… plus jamais ».`.split('\n');
+
+
+  const LV = [
+    { name: 'Niveau 1 · Choisis', title: 'Choisis la bonne réponse de Kevin', items: L1 },
+    { name: 'Niveau 2 · Remets dans l’ordre', title: 'Clique sur les mots dans le bon ordre', items: L2 },
+    { name: 'Niveau 3 · Écris', title: 'Écris la phrase à la forme négative', items: L3 }
+  ];
+  const N = 10;
+  const KEY = 'didac-thibaut-dit-non-v2';
+  let mem = { best: [0, 0, 0], seen: [[], [], []] };
+  try { const m = JSON.parse(localStorage.getItem(KEY) || 'null'); if (m && m.best && m.seen) mem = m; } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch (e) {} };
+
+  const st = { l: 0, i: 0, set: [], score: [0, 0, 0], done: false, tries: 0, choice: null, built: [], pool: [], opts: [] };
+  const $ = id => document.getElementById(id);
+  const card = $('card'), fb = $('feedback'), bCheck = $('btnCheck'), bNext = $('btnNext');
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const nb = s => esc(s).replace(/ ([?!:;»])/g, '&nbsp;$1').replace(/« /g, '«&nbsp;');
+  const strip = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const norm = s => s.toLowerCase().replace(/[’`´]/g, '\'').replace(/^\s*non\s*,?\s*/, '').replace(/[.!?]+\s*$/, '')
+    .replace(/\s+/g, ' ').replace(/\s*'\s*/g, '\'').trim();
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const shuffledWords = w => { let s; do { s = shuffle(w.map((t, k) => ({ t, k }))); } while (w.length > 1 && s.every((x, k) => x.k === k)); return s; };
+  const bubble = (who, q) => '<div class="bubble laurent"><span class="who">' + who + '</span><p>' + nb(q) + '</p></div>';
+
+  function draw(l) {
+    const n = LV[l].items.length, seen = new Set(mem.seen[l]);
+    const fresh = shuffle([...Array(n).keys()].filter(k => !seen.has(k)));
+    const old = shuffle([...Array(n).keys()].filter(k => seen.has(k)));
+    return fresh.concat(old).slice(0, N);
+  }
+
+  function render() {
+    const lv = LV[st.l];
+    $('lvlName').textContent = lv.name; $('lvlTitle').textContent = lv.title;
+    fb.hidden = true; fb.className = 'fb';
+    bNext.hidden = true; bCheck.hidden = false;
+    st.done = false; st.tries = 0; st.choice = null;
+    if (st.i >= st.set.length) return renderEnd();
+    const it = lv.items[st.set[st.i]];
+    $('count').textContent = 'Question ' + (st.i + 1) + ' / ' + st.set.length;
+    $('progBar').style.width = (st.i / st.set.length * 100) + '%';
+    if (st.l === 0) {
+      st.opts = shuffle([{ t: it.a, ok: true }, { t: it.f[0] }, { t: it.f[1] }]);
+      card.innerHTML = bubble('Laurent', it.q) +
+        '<div class="opts" role="radiogroup" aria-label="Réponses de Kevin">' +
+        st.opts.map((o, k) => '<button type="button" class="opt" role="radio" aria-checked="false" data-k="' + k + '"><span class="letter">' + 'ABC'[k] + '</span>' + nb(o.t) + '</button>').join('') + '</div>';
+      card.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => {
+        if (st.done) return;
+        st.choice = +b.dataset.k;
+        card.querySelectorAll('.opt').forEach(x => x.setAttribute('aria-checked', String(x === b)));
+      }));
+    } else if (st.l === 1) {
+      st.built = []; st.pool = shuffledWords(it.w);
+      card.innerHTML = bubble('Laurent', it.q) +
+        '<div class="bubble thibaut"><span class="who">Kevin</span><div class="build" id="build" aria-label="Ta phrase"></div></div>' +
+        '<div class="pool" id="pool" aria-label="Mots à placer"></div>' +
+        '<button type="button" class="d-btn d-btn--ghost d-btn--small" id="btnUndo">Effacer le dernier mot</button>';
+      drawWords();
+      $('btnUndo').addEventListener('click', () => { if (st.done || !st.built.length) return; st.pool.push(st.built.pop()); drawWords(); });
+    } else {
+      card.innerHTML = bubble('Phrase positive', it.s) +
+        '<label class="lbl" for="ans">Kevin dit non avec <span class="chip">ne… ' + esc(it.h) + '</span></label>' +
+        '<div class="bubble thibaut"><span class="who">Kevin</span><input id="ans" type="text" autocomplete="off" spellcheck="false" placeholder="Écris la phrase négative…"></div>' +
+        '<div class="d-row keys" aria-label="Caractères spéciaux">' + ['é', 'è', 'ê', 'à', 'ç', '’'].map(c => '<button type="button" class="d-btn d-btn--ghost d-btn--small key">' + c + '</button>').join('') + '</div>';
+      const inp = $('ans');
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); st.done ? next() : check(); } });
+      card.querySelectorAll('.key').forEach(k => k.addEventListener('click', () => {
+        const p = inp.selectionStart ?? inp.value.length;
+        inp.value = inp.value.slice(0, p) + k.textContent + inp.value.slice(inp.selectionEnd ?? p);
+        inp.focus(); inp.setSelectionRange(p + 1, p + 1);
+      }));
+      setTimeout(() => inp.focus(), 0);
+    }
+  }
+
+  function drawWords() {
+    const build = $('build'), pool = $('pool');
+    build.innerHTML = st.built.length ? st.built.map(x => '<span class="word placed">' + nb(x.t) + '</span>').join('') : '<span class="ph">Clique sur les mots…</span>';
+    pool.innerHTML = st.pool.map((x, n) => '<button type="button" class="word" data-n="' + n + '">' + nb(x.t) + '</button>').join('');
+    pool.querySelectorAll('.word').forEach(b => b.addEventListener('click', () => {
+      if (st.done) return;
+      st.built.push(st.pool.splice(+b.dataset.n, 1)[0]); drawWords();
+    }));
+  }
+
+  function show(ok, html) {
+    fb.hidden = false; fb.className = 'fb ' + (ok ? 'ok' : 'ko');
+    fb.innerHTML = '<b>' + (ok ? '✔ Bravo !' : '✘ Pas encore.') + '</b> ' + html;
+  }
+  function finish(ok) {
+    st.done = true;
+    if (ok && st.tries === 1) st.score[st.l]++;
+    const k = st.set[st.i];
+    if (!mem.seen[st.l].includes(k)) { mem.seen[st.l].push(k); save(); }
+    bCheck.hidden = true; bNext.hidden = false; bNext.focus();
+    drawScores();
+  }
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  function check() {
+    if (st.done) return;
+    const it = LV[st.l].items[st.set[st.i]];
+    if (st.l === 0) {
+      if (st.choice === null) { show(false, 'Choisis d’abord une réponse.'); return; }
+      st.tries++;
+      const ok = !!st.opts[st.choice].ok;
+      card.querySelectorAll('.opt').forEach((b, k) => {
+        b.disabled = true;
+        if (st.opts[k].ok) b.classList.add('good'); else if (k === st.choice) b.classList.add('bad');
+      });
+      show(ok, nb(it.e)); finish(ok);
+    } else if (st.l === 1) {
+      if (st.pool.length) { show(false, 'Place tous les mots.'); return; }
+      st.tries++;
+      const ok = st.built.every((x, k) => x.t === it.w[k]);
+      if (ok) { show(true, '« ' + nb(it.w.join(' ')) + ' »'); $('build').classList.add('good'); finish(true); }
+      else if (st.tries < 2) { show(false, 'Regarde où sont les deux parties de la négation. Encore un essai !'); st.pool = shuffledWords(it.w); st.built = []; drawWords(); }
+      else { show(false, 'La bonne phrase : « ' + nb(it.w.join(' ')) + ' »'); finish(false); }
+    } else {
+      const inp = $('ans'), v = norm(inp.value);
+      if (!v) { show(false, 'Écris d’abord ta phrase.'); return; }
+      st.tries++;
+      const exact = it.a.some(a => norm(a) === v);
+      const almost = !exact && it.a.some(a => strip(norm(a)) === strip(v));
+      if (exact || almost) {
+        inp.readOnly = true;
+        show(true, '« ' + nb(it.a[0]) + ' »' + (almost ? ' Attention aux accents !' : ''));
+        finish(true); return;
+      }
+      let tip = 'Vérifie l’ordre des mots et l’orthographe.';
+      if (!/\bne\b|\bn'/.test(v)) tip = 'N’oublie pas <b>ne</b> (ou <b>n’</b> devant une voyelle) !';
+      else if (/\bpas\b/.test(v) && it.h !== 'pas' && it.h !== 'pas encore') tip = 'Avec <b>ne… ' + esc(it.h) + '</b>, on ne met pas « pas » !';
+      else if (!v.includes(it.h)) tip = 'Utilise <b>' + esc(it.h) + '</b>.';
+      if (st.tries < 2) show(false, tip + ' Encore un essai !');
+      else { inp.readOnly = true; show(false, tip + ' La bonne phrase : « ' + nb(it.a[0]) + ' »'); finish(false); }
+    }
+  }
+  function next() { st.i++; render(); }
+
+  function renderEnd() {
+    const lv = LV[st.l], n = st.set.length, sc = st.score[st.l];
+    if (sc > mem.best[st.l]) { mem.best[st.l] = sc; save(); }
+    drawScores();
+    $('count').textContent = 'Série terminée'; $('progBar').style.width = '100%';
+    bCheck.hidden = true; bNext.hidden = true;
+    const msg = sc === n ? 'Parfait ! Kevin est presque content…' : sc >= n * 0.7 ? 'Très bien ! Encore une série pour atteindre 10 / 10 ?' : 'Relis l’aide-mémoire et fais une nouvelle série : tu vas y arriver !';
+    card.innerHTML = '<div class="end"><img class="d-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgdmlld0JveD0iMCAwIDE0IDE0IiB4bWxuczpjMnBhPSJodHRwOi8vYzJwYS5vcmcvbWFuaWZlc3QiPjxtZXRhZGF0YT48YzJwYTptYW5pZmVzdD5BQUFXZ21wMWJXSUFBQUFlYW5WdFpHTXljR0VBRVFBUWdBQUFxZ0E0bTNFRFl6SndZUUFBQUJaY2FuVnRZZ0FBQUVkcWRXMWtZekp0WVFBUkFCQ0FBQUNxQURpYmNRTjFjbTQ2WXpKd1lUbzFOemswTldaallTMDBaall5TFRReVpqRXRPVFJtWWkwME5XSTBZekUzWm1WaFpqa0FBQUFEbDJwMWJXSUFBQUFwYW5WdFpHTXlZWE1BRVFBUWdBQUFxZ0E0bTNFRFl6SndZUzVoYzNObGNuUnBiMjV6QUFBQUFMeHFkVzFpQUFBQVJHcDFiV1JqWW05eUFCRUFFSUFBQUtvQU9KdHhFMk15Y0dFdWFXNW5jbVZrYVdWdWRDNTJNd0FBQUFBWVl6SnphR3VyYlRkc2YzbVVKTG9pM2NEWTU4TUFBQUJ3WTJKdmNxTnBaR002Wm05eWJXRjBiV2x0WVdkbEwzTjJaeXQ0Yld4cWFXNXpkR0Z1WTJWSlJIZ3NlRzF3T21scFpEcG1Oak14TURkbVlpMDRNek15TFRRNVpUQXRZak0yWXkxbU5HRTFZelUzWWpWbU5XSnNjbVZzWVhScGIyNXphR2x3YUhCaGNtVnVkRTltQUFBQjRtcDFiV0lBQUFCQmFuVnRaR05pYjNJQUVRQVFnQUFBcWdBNG0zRVRZekp3WVM1aFkzUnBiMjV6TG5ZeUFBQUFBQmhqTW5ObzBnbElnT3p2NTBhSi9henVjZGx1a0FBQUFabGpZbTl5b21kaFkzUnBiMjV6Z3FKbVlXTjBhVzl1YTJNeWNHRXViM0JsYm1Wa2FuQmhjbUZ0WlhSbGNuT2hhMmx1WjNKbFpHbGxiblJ6Z2FKamRYSnNlQzF6Wld4bUkycDFiV0ptUFdNeWNHRXVZWE56WlhKMGFXOXVjeTlqTW5CaExtbHVaM0psWkdsbGJuUXVkak5rYUdGemFGZ2dzTjF5aEZxb2d5YWk5M3AvZWhmbTJaV3ZENm9mTllVcDNwdlo2dXlqZS9Pa1ptRmpkR2x2Ym5nZFkyOXRMbUZ1ZEdoeWIzQnBZeTVqYkdGMVpHVXVjSEp2ZG1sa1pXUnFjR0Z5WVcxbGRHVnljNkY0SDJOdmJTNWhiblJvY205d2FXTXViM0pwWjJsdUxXTnZibVpwWkdWdVkyVm5kVzVyYm05M2JtdGtaWE5qY21sd2RHbHZibmhtUTJ4aGRXUmxJSEJ5YjNacFpHVmtJSFJvYVhNZ1ptbHNaU0JoZENCMGFHVWdjbVZ4ZFdWemRDQnZaaUJoSUhWelpYSWdZVzVrSUcxaGVTQm9ZWFpsSUdOeVpXRjBaV1FnYjNJZ2JXOWthV1pwWldRZ2RHaGxJR1pwYkdVZ1kyOXVkR1Z1ZEhNdWJYTnZablIzWVhKbFFXZGxiblNoWkc1aGJXVm1RMnhoZFdSbGNtRnNiRUZqZEdsdmJuTkpibU5zZFdSbFpQVUFBQURJYW5WdFlnQUFBRUJxZFcxa1kySnZjZ0FSQUJDQUFBQ3FBRGliY1JOak1uQmhMbWhoYzJndVpHRjBZUUFBQUFBWVl6SnphTHk5cXc4Tm5sMlJ4LzhPV1BiWGFqSUFBQUNBWTJKdmNxVmpZV3huWm5Ob1lUSTFObU53WVdSTkFBQUFBQUFBQUFBQUFBQUFBR1JvWVhOb1dDQUwzUmNYTlVQYUpiMGNJR2RPL0Z1RmFpYUs3NkhqR1FWS3huK1NXaGF5ekdSdVlXMWxibXAxYldKbUlHMWhibWxtWlhOMGFtVjRZMngxYzJsdmJuT0JvbVZ6ZEdGeWRCaVNabXhsYm1kMGFCa2VCQUFBQWo1cWRXMWlBQUFBSjJwMWJXUmpNbU5zQUJFQUVJQUFBS29BT0p0eEEyTXljR0V1WTJ4aGFXMHVkaklBQUFBQ0QyTmliM0tsWTJGc1oyWnphR0V5TlRacGMybG5ibUYwZFhKbGVFMXpaV3htSTJwMWJXSm1QUzlqTW5CaEwzVnlianBqTW5CaE9qVTNPVFExWm1OaExUUm1Oakl0TkRKbU1TMDVOR1ppTFRRMVlqUmpNVGRtWldGbU9TOWpNbkJoTG5OcFoyNWhkSFZ5WldwcGJuTjBZVzVqWlVsRWVDeDRiWEE2YVdsa09tTTFPVGhoWm1ReUxXSTBNalF0TkRBd1ppMWhOMkU1TFdVNE1tVmtZVGRqT1RZNE1YSmpjbVZoZEdWa1gyRnpjMlZ5ZEdsdmJuT0RvbU4xY214NExYTmxiR1lqYW5WdFltWTlZekp3WVM1aGMzTmxjblJwYjI1ekwyTXljR0V1YVc1bmNtVmthV1Z1ZEM1Mk0yUm9ZWE5vV0NDdzNYS0VXcWlESnFMM2VuOTZGK2JabGE4UHFoODFoU25lbTlucTdLTjc4NkpqZFhKc2VDcHpaV3htSTJwMWJXSm1QV015Y0dFdVlYTnpaWEowYVc5dWN5OWpNbkJoTG1GamRHbHZibk11ZGpKa2FHRnphRmdnVHlXR1BkTEM5NmpvYmxBRUk0cWpXY0hXVTZrWVp4Q2pYRlhWQm5wZHlMZWlZM1Z5YkhncGMyVnNaaU5xZFcxaVpqMWpNbkJoTG1GemMyVnlkR2x2Ym5Ndll6SndZUzVvWVhOb0xtUmhkR0ZrYUdGemFGZ2d2ekg5NmRVSGtjZTdOQVJ0M2hkTTQ1V1hxK0dYU2N3cEJMRlVlK2E0Z3Y1MFkyeGhhVzFmWjJWdVpYSmhkRzl5WDJsdVptK2paRzVoYldWdlFXNTBhSEp2Y0dsaklFWnBiR1Z6WjNabGNuTnBiMjVsTVM0d0xqQnJjM0JsWTFabGNuTnBiMjVsTWk0MExqQUFBQkE0YW5WdFlnQUFBQ2hxZFcxa1l6Smpjd0FSQUJDQUFBQ3FBRGliY1FOak1uQmhMbk5wWjI1aGRIVnlaUUFBQUJBSVkySnZjdEtFV1FJU29nRW1HQ0ZaQWdvd2dnSUdNSUlCamFBREFnRUNBaFJBNWFBSzdzSTUwTDY0Zy9vR1FnVTlaMVVUQURBS0JnZ3Foa2pPUFFRREF6QkpNUmN3RlFZRFZRUUtFdzVCYm5Sb2NtOXdhV01zSUZCQ1F6RXVNQ3dHQTFVRUF4TWxRVzUwYUhKdmNHbGpJRU52Ym5SbGJuUWdRM0psWkdWdWRHbGhiSE1nVW05dmRDQkRRVEFlRncweU5qQTRNRGN4T0RRek5UWmFGdzB5T0RBNE1EWXhPVFF6TlRaYU1FUXhGekFWQmdOVkJBb1REa0Z1ZEdoeWIzQnBZeXdnVUVKRE1Ta3dKd1lEVlFRREV5QkJiblJvY205d2FXTWdRMnhoZFdSbElFTnZiblJsYm5RZ1UybG5ibWx1WnpCWk1CTUdCeXFHU000OUFnRUdDQ3FHU000OUF3RUhBMElBQkpoNkNtdkxVQmdGRk5VMHZVS2xPVnRFNmRqZDE3TDVTdXdYMExlbUZpc0JNM2RrZC8zY3lqeEZBM1FvNVM0NmZYMC9paFkwVlo3bWZiOUtGNzAzdDVPaldEQldNQTRHQTFVZER3RUIvd1FFQXdJSGdEQVZCZ05WSFNVRURqQU1CZ29yQmdFRUFZUG9YZ0lCTUF3R0ExVWRFd0VCL3dRQ01BQXdId1lEVlIwakJCZ3dGb0FVemxIaUJJRk9aRnNqK09QRXo1bytuTUhYWE1Jd0NnWUlLb1pJemowRUF3TURad0F3WkFJd01YTWRGSjRCZXRMTFZZN09SdUU5bm9xYmJBWk9abi9hQXJYeVR3RkFaZktyUHp4RjJ2UG9KTmYxK1VDZGcxWEdBakJ3WDF6ZDlXR3FZa3FtTDVTRnF3MVF5U2pyMXpKZnBKTTkrMXJkRHdTUExNT1BPakt1aVhqb1UvcFVVZUc5UndtaFkzQmhaRmtObmdBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFQWllRTlIrKzNLMHdjcDhTS3JML2ZzSVBzR0tIK1VGYjFkUGU5Mlc4WDU0YkNZYTcyMCtkUWFlNzUrOTVNQ3I4VzM4U1hJZlVndVRLaU9VODRKY1N1L1piVWs9PC9jMnBhOm1hbmlmZXN0PjwvbWV0YWRhdGE+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGZpbGw9IiM4ODAwNEEiIGQ9Ik0uNzUgMEEuNzUuNzUgMCAwIDAgMCAuNzV2Mi43N2EzLjc1IDMuNzUgMCAwIDAgMy43NSAzLjc1aC4zODVhLjc1Ljc1IDAgMCAwIC43NS0uNzVWLjc1YS43NS43NSAwIDAgMC0uNzUtLjc1em0uNzUgMy41MlYxLjVoMS44ODV2NC4yNEEyLjI1IDIuMjUgMCAwIDEgMS41IDMuNTJNMTMuMjUgMGEuNzUuNzUgMCAwIDEgLjc1Ljc1djIuNzdhMy43NSAzLjc1IDAgMCAxLTMuNzUgMy43NWgtLjM4NWEuNzUuNzUgMCAwIDEtLjc1LS43NVYuNzVhLjc1Ljc1IDAgMCAxIC43NS0uNzV6bS0uNzUgMy41MlYxLjVoLTEuODg1djQuMjRBMi4yNSAyLjI1IDAgMCAwIDEyLjUgMy41Mk03IDguNjU0YS43NS43NSAwIDAgMSAuNzUuNzVWMTIuNWgyLjYxNWEuNzUuNzUgMCAwIDEgMCAxLjVIMy42MzRhLjc1Ljc1IDAgMCAxIDAtMS41SDYuMjVWOS40MDRhLjc1Ljc1IDAgMCAxIC43NS0uNzUiLz48cGF0aCBmaWxsPSIjREFEQURBIiBkPSJNMy41LjAwMmEuNS41IDAgMCAwLS41LjVWNmE0IDQgMCAxIDAgOCAwVi41MDJhLjUuNSAwIDAgMC0uNS0uNXoiLz48L2c+PC9zdmc+Cg==" alt=""><h3>' + esc(lv.name) + ' : ' + sc + ' / ' + n + '</h3><p>' + nb(msg) + '</p>' +
+      '<div class="d-row"><button type="button" class="d-btn" id="again">Nouvelle série de 10</button>' +
+      (st.l < 2 ? '<button type="button" class="d-btn d-btn--ghost" id="goNext">Niveau suivant →</button>' : '<button type="button" class="d-btn d-btn--ghost" id="goGame">Jeu de l’oie →</button>') + '</div>' +
+      '<p class="d-box d-box--question" style="margin:0"><b>Devoirs&nbsp;:</b> note ton score dans ton dossier (page « Devoirs et programme »).</p></div>';
+    $('again').addEventListener('click', restart);
+    if ($('goNext')) $('goNext').addEventListener('click', () => go(st.l + 1));
+    if ($('goGame')) $('goGame').addEventListener('click', () => go('g'));
+  }
+
+  function drawScores() {
+    $('scores').innerHTML = LV.map((lv, k) => {
+      const n = lv.items.length, s = st.score[k], seen = mem.seen[k].length;
+      return '<div class="sc"><div class="sc-top"><span>Niveau ' + (k + 1) + '</span><b>' + s + ' / ' + N + '</b></div>' +
+        '<div class="bar"><span style="width:' + (s / N * 100) + '%"></span></div>' +
+        '<div class="sc-best">Meilleure série : ' + mem.best[k] + ' / ' + N + ' · Découvertes : ' + seen + ' / ' + n + '</div></div>';
+    }).join('');
+  }
+
+  function go(l) {
+    document.querySelectorAll('#seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === String(l))));
+    const game = l === 'g';
+    $('viewEx').hidden = game; $('viewGame').hidden = !game;
+    if (game) { drawBoard(); return; }
+    st.l = l; st.i = 0; st.score[l] = 0; st.set = draw(l); render(); drawScores();
+  }
+  function restart() { go(st.l); }
+
+  // ================= JEU DE L'OIE =================
+  const END = 41;
+  const SPECIAL = {
+    6: { n: 'Pont', d: 'va à la case 12', to: 12 },
+    9: { n: 'Oie', d: 'avance encore', oie: true }, 18: { n: 'Oie', d: 'avance encore', oie: true },
+    27: { n: 'Oie', d: 'avance encore', oie: true }, 36: { n: 'Oie', d: 'avance encore', oie: true },
+    19: { n: 'Puits', d: 'passe un tour', skip: true }, 34: { n: 'Prison', d: 'passe un tour', skip: true },
+    31: { n: 'Labyrinthe', d: 'retour à 22', to: 22 }, 39: { n: 'Kevin boude', d: 'retour à 30', to: 30 }
+  };
+  const CAT = { N: 'Kevin dit non', T: 'Transforme', C: 'Corrige l’erreur', P: 'À toi de parler' };
+  const catOf = i => 'NTCP'[i % 4];
+  const DECK = {
+    N: () => L1.map(x => ({ q: 'Laurent demande : « ' + x.q + ' » Réponds comme Kevin.', a: x.a })),
+    T: () => L3.map(x => ({ q: 'Mets à la forme négative avec ne… ' + x.h + ' : « ' + x.s + ' »', a: x.a[0] })),
+    C: () => CORR.map(x => ({ q: 'Corrige l’erreur : « ' + x.q + ' »', a: x.a })),
+    P: () => PARLE.map(x => ({ q: x, a: 'Réponse libre : la classe décide si les négations sont correctes.' }))
+  };
+  const decks = {};
+  const pick = c => { if (!decks[c] || !decks[c].length) decks[c] = shuffle(DECK[c]()); return decks[c].pop(); };
+  const TEAMC = ['var(--d-gelb)', 'var(--d-blau)', 'var(--d-gruen)', 'var(--d-pink)', 'var(--d-orange)', 'var(--d-gris2)'];
+  const g = { teams: [], cur: 0, phase: 'idle', from: 0, pend: null, hop: false, spin: null };
+
+  function cellPos(i) { const r = Math.floor(i / 7), c = r % 2 === 0 ? i % 7 : 6 - (i % 7); return { r: r + 1, c: c + 1 }; }
+  function drawBoard() {
+    const b = $('board'); let h = '';
+    for (let i = 0; i <= END; i++) {
+      const p = cellPos(i), sp = SPECIAL[i];
+      let cls = 'cell', lab = '';
+      if (i === 0) { cls += ' c-S'; lab = 'Départ'; }
+      else if (i === END) { cls += ' c-S'; lab = 'Arrivée'; }
+      else if (sp) { cls += ' c-S'; lab = sp.n + '<small>' + sp.d + '</small>'; }
+      else { cls += ' c-' + catOf(i); lab = '<span class="cat">' + catOf(i) + '</span>'; }
+      const pawns = g.teams.map((t, k) => t.pos === i ? '<span class="pawn' + (g.hop && k === g.cur ? ' hop' : '') + '" style="background:' + TEAMC[k] + '" title="Équipe ' + (k + 1) + '">' + (k + 1) + '</span>' : '').join('');
+      h += '<div data-i="' + i + '" class="' + cls + (g.teams[g.cur] && g.teams[g.cur].pos === i ? ' here' : '') + '" style="grid-row:' + p.r + ';grid-column:' + p.c + '"><span class="num">' + i + '</span><span class="lab">' + lab + '</span><span class="pawns">' + pawns + '</span></div>';
+    }
+    b.innerHTML = h;
+  }
+  function drawTeams() {
+    $('teams').innerHTML = g.teams.map((t, k) => '<li class="' + (k === g.cur ? 'cur' : '') + '"><span class="pawn" style="background:' + TEAMC[k] + '">' + (k + 1) + '</span> Équipe ' + (k + 1) + ' · case ' + t.pos + (t.skip ? ' · passe un tour' : '') + '</li>').join('');
+    const t = g.teams[g.cur];
+    $('turn').innerHTML = t ? '<span class="pawn big" style="background:' + TEAMC[g.cur] + '">' + (g.cur + 1) + '</span> Équipe ' + (g.cur + 1) : '';
+    drawBoard();
+  }
+  const log = s => { $('log').innerHTML = nb(s); };
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // hasard cryptographique : le résultat ne dépend ni du moment du clic ni de la face affichée
+  const d6 = () => { const a = new Uint32Array(1); let x; do { crypto.getRandomValues(a); x = a[0]; } while (x >= 4294967292); return 1 + (x % 6); };
+  const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+  function face(n) {
+    const die = $('die');
+    die.innerHTML = [...Array(9).keys()].map(k => '<span class="pip' + (PIPS[n].includes(k) ? ' on' : '') + '"></span>').join('');
+    die.setAttribute('aria-label', 'Dé : ' + n);
+  }
+  function setStep(n) {
+    document.querySelectorAll('#steps li').forEach((li, k) => { li.classList.toggle('on', k === n); li.classList.toggle('done', k < n); });
+  }
+  function focusCell(i) {
+    const c = document.querySelector('#board .cell[data-i="' + i + '"]');
+    if (c && c.scrollIntoView) c.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function start() {
+    const n = +$('nTeams').value;
+    g.teams = Array.from({ length: n }, () => ({ pos: 0, skip: 0 })); g.cur = 0;
+    $('setup').hidden = true; $('play').hidden = false;
+    face(1); drawTeams(); readyToRoll();
+  }
+
+  function readyToRoll() {
+    g.phase = 'idle'; setStep(0);
+    $('btnRoll').hidden = false; $('btnRoll').disabled = false; $('btnRoll').textContent = 'Lancer le dé';
+    $('btnNextTeam').hidden = true; $('btnBackCard').hidden = true;
+    log('Équipe ' + (g.cur + 1) + ', lance le dé !');
+    drawTeams(); focusCell(g.teams[g.cur].pos);
+  }
+
+  async function nextTeam() {
+    $('btnNextTeam').hidden = true;
+    for (let guard = 0; guard < 20; guard++) {
+      g.cur = (g.cur + 1) % g.teams.length;
+      const t = g.teams[g.cur];
+      if (t.skip) { t.skip--; drawTeams(); log('Équipe ' + (g.cur + 1) + ' passe son tour.'); await sleep(1600); continue; }
+      break;
+    }
+    readyToRoll();
+  }
+
+  // ---- le dé : il tourne jusqu'au clic
+  function rollClick() {
+    if (g.phase === 'idle') {
+      g.phase = 'spin'; g.from = g.teams[g.cur].pos;
+      $('die').classList.add('spin');
+      $('btnRoll').textContent = 'Stop !';
+      log('Le dé tourne… clique sur « Stop ! » ou sur le dé pour l’arrêter.');
+      let last = 0;
+      g.spin = setInterval(() => { let n; do { n = 1 + Math.floor(Math.random() * 6); } while (n === last); last = n; face(n); }, 80);
+    } else if (g.phase === 'spin') {
+      stopDie();
+    }
+  }
+  async function stopDie() {
+    g.phase = 'stopping'; clearInterval(g.spin);
+    $('btnRoll').disabled = true;
+    const n = d6();
+    const fakes = [];
+    while (fakes.length < 4) { const f = 1 + Math.floor(Math.random() * 6); if (f !== n && f !== fakes[fakes.length - 1]) fakes.push(f); }
+    for (const [k, ms] of [110, 160, 230, 320].entries()) { face(fakes[k]); await sleep(ms); }
+    face(n); await sleep(200);
+    const die = $('die'); die.classList.remove('spin'); die.classList.add('stop');
+    $('log').innerHTML = 'Équipe ' + (g.cur + 1) + ' a fait <b>' + n + '</b>&nbsp;!';
+    await sleep(1100); die.classList.remove('stop');
+    $('btnRoll').hidden = true;
+    g.phase = 'move'; setStep(1);
+    await walk(Math.min(END, g.teams[g.cur].pos + n), 420);
+    await land(n);
+  }
+
+  // ---- le pion avance case par case
+  async function walk(target, ms) {
+    const t = g.teams[g.cur];
+    while (t.pos !== target) {
+      t.pos += target > t.pos ? 1 : -1;
+      g.hop = true; drawTeams(); focusCell(t.pos);
+      $('log').innerHTML = 'Équipe ' + (g.cur + 1) + ' → case <b>' + t.pos + '</b>';
+      await sleep(ms);
+    }
+    g.hop = false; drawTeams();
+    const c = document.querySelector('#board .cell[data-i="' + t.pos + '"]');
+    if (c) c.classList.add('land');
+    await sleep(700);
+  }
+
+  async function land(d) {
+    const t = g.teams[g.cur], i = t.pos, sp = SPECIAL[i];
+    if (i === END) { log('Équipe ' + (g.cur + 1) + ' est à l’arrivée ! Dernier défi pour gagner…'); await sleep(1400); return card_('NTC'[Math.floor(Math.random() * 3)], true); }
+    if (sp && sp.oie) { log('Oie ! Équipe ' + (g.cur + 1) + ' avance encore de ' + d + ' cases.'); await sleep(1500); await walk(Math.min(END, i + d), 420); return land(d); }
+    if (sp && sp.skip) {
+      t.skip = 1; drawTeams(); log(sp.n + ' : équipe ' + (g.cur + 1) + ' passera le prochain tour.');
+      return endTurn();
+    }
+    if (sp && sp.to) {
+      log(sp.n + ' : équipe ' + (g.cur + 1) + ' ' + sp.d + '.'); await sleep(1500);
+      await walk(sp.to, 220);
+      if (sp.to > i) { log('Équipe ' + (g.cur + 1) + ' arrive sur la case ' + sp.to + '.'); await sleep(900); return card_(catOf(sp.to)); }
+      return endTurn();
+    }
+    log('Case ' + i + ' : ' + CAT[catOf(i)] + ' !'); await sleep(1100);
+    card_(catOf(i));
+  }
+
+  function endTurn() { g.phase = 'end'; setStep(3); $('btnNextTeam').hidden = false; $('btnNextTeam').focus(); }
+
+  function openCard() { const dl = $('dlgCard'); dl.showModal ? dl.showModal() : dl.setAttribute('open', ''); }
+  function closeCard() { const dl = $('dlgCard'); dl.close ? dl.close() : dl.removeAttribute('open'); }
+
+  function card_(c, final) {
+    g.phase = 'card'; setStep(2);
+    const q = pick(c); g.pend = { final };
+    $('cardCat').innerHTML = '<span class="sw c-' + c + '">' + c + '</span> ' + esc(CAT[c]) + (final ? ' · défi final' : '');
+    $('cardTeam').textContent = 'Équipe ' + (g.cur + 1) + ' · case ' + g.teams[g.cur].pos;
+    $('cardQ').innerHTML = nb(q.q);
+    $('cardA').hidden = true; $('cardA').innerHTML = '<b>Réponse&nbsp;:</b> ' + nb(q.a);
+    $('cardBtns1').hidden = false; $('cardBtns2').hidden = true;
+    openCard();
+  }
+
+  async function result(ok) {
+    closeCard();
+    const t = g.teams[g.cur];
+    if (ok && g.pend.final) {
+      setStep(3); drawTeams(); log('Bravo ! L’équipe ' + (g.cur + 1) + ' gagne la partie !');
+      $('turn').innerHTML = '<b>Victoire de l’équipe ' + (g.cur + 1) + '&nbsp;!</b>';
+      return;
+    }
+    if (!ok) {
+      log('Raté ! Équipe ' + (g.cur + 1) + ' retourne à la case ' + g.from + '.'); await sleep(1200);
+      await walk(g.from, 260);
+      log('Raté : équipe ' + (g.cur + 1) + ' est revenue à la case ' + g.from + '.');
+    } else log('Réussi ! Équipe ' + (g.cur + 1) + ' reste sur la case ' + t.pos + '.');
+    endTurn();
+  }
+
+  $('btnStart').addEventListener('click', start);
+  $('btnRoll').addEventListener('click', rollClick);
+  $('die').addEventListener('click', () => { if (g.phase === 'spin') stopDie(); else if (g.phase === 'idle') rollClick(); });
+  $('btnNextTeam').addEventListener('click', nextTeam);
+  $('btnNew').addEventListener('click', () => { clearInterval(g.spin); g.phase = 'idle'; $('setup').hidden = false; $('play').hidden = true; g.teams = []; drawBoard(); });
+  $('btnShow').addEventListener('click', () => { $('cardA').hidden = false; $('cardBtns1').hidden = true; $('cardBtns2').hidden = false; $('btnOk').focus(); });
+  $('btnOk').addEventListener('click', () => result(true));
+  $('btnKo').addEventListener('click', () => result(false));
+  $('btnPeek').addEventListener('click', () => { closeCard(); $('btnBackCard').hidden = false; focusCell(g.teams[g.cur].pos); });
+  $('btnBackCard').addEventListener('click', () => { $('btnBackCard').hidden = true; openCard(); });
+  $('dlgCard').addEventListener('cancel', e => e.preventDefault());
+
+  document.querySelectorAll('#seg button').forEach(b => b.addEventListener('click', () => go(b.dataset.l === 'g' ? 'g' : +b.dataset.l)));
+  bCheck.addEventListener('click', check);
+  bNext.addEventListener('click', next);
+  $('btnRestart').addEventListener('click', restart);
+  const dlg = $('dlgRegles');
+  $('btnRegles').addEventListener('click', () => dlg.showModal ? dlg.showModal() : dlg.setAttribute('open', ''));
+  $('dlgClose').addEventListener('click', () => dlg.close ? dlg.close() : dlg.removeAttribute('open'));
+
+  go(0);
+})();
+</script>
