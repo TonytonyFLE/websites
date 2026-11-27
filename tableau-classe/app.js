@@ -140,14 +140,14 @@ const WIDGETS = {
 
   /* ----- Minuteur ----- */
   timer: {
-    glyph: '5:00', w: 420, h: 300, init: () => ({ dur: 300, remaining: 300, endAt: null }),
+    glyph: '5:00', w: 420, h: 300, compact: true, init: () => ({ dur: 300, remaining: 300, endAt: null, compact: false }),
     mount(b, wd, ctx) {
       const st = wd.state;
       b.innerHTML = `<div class="timer-row"><svg class="timer-ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="42" fill="none" stroke="#DADADA" stroke-width="10"/><circle class="ring" cx="50" cy="50" r="42" fill="none" stroke="#88004A" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 50 50)"/></svg><div class="big" data-role="main"></div></div>
-        <div class="ctl">
+        <div class="ctl full-only">
           ${[1, 2, 5, 10, 15].map(m => `<button class="btn btn--s btn--ghost" data-m="${m}">${m} min</button>`).join('')}
         </div>
-        <div class="ctl" style="padding-top:0">
+        <div class="ctl full-only" style="padding-top:0">
           <button class="btn btn--ghost" data-act="minus" aria-label="−1 min">−1</button>
           <button class="btn" data-act="go"></button>
           <button class="btn btn--ghost" data-act="reset">${T('reset')}</button>
@@ -161,9 +161,10 @@ const WIDGETS = {
         const l = left();
         if (st.endAt === null && st.remaining <= 0 && st.dur > 0) {
           main.innerHTML = `<div><div class="digits timer-disp">00:00</div><div class="done-msg">${T('timeUp')}</div></div>`;
+          if (st.compact) main.firstElementChild.onclick = () => setDur(st.dur);
         } else {
-          main.innerHTML = `<button class="digits timer-disp" style="border:0;background:transparent" title="${T('clickToEdit')}">${fmtHMS(Math.ceil(l))}</button>`;
-          $('.timer-disp', main).onclick = edit;
+          main.innerHTML = `<button class="digits timer-disp" style="border:0;background:transparent" title="${st.compact ? T('clickToStart') : T('clickToEdit')}">${fmtHMS(Math.ceil(l))}</button>`;
+          $('.timer-disp', main).onclick = st.compact ? toggle : edit;
         }
       }
       function upd() {
@@ -172,6 +173,12 @@ const WIDGETS = {
         if (!editing) { const d = $('.timer-disp', main); if (d && st.endAt) d.textContent = fmtHMS(Math.ceil(l)); }
         ring.setAttribute('stroke-dasharray', `${st.dur ? Math.min(100, l / st.dur * 100) : 0} 100`);
         go.textContent = st.endAt ? T('pause') : T('start');
+      }
+      function toggle() {
+        editing = false;
+        if (st.endAt) { st.remaining = left(); st.endAt = null; }
+        else { if (st.remaining <= 0) { st.remaining = st.dur; ctx.el.classList.remove('is-done'); rang = false; } if (st.remaining > 0) st.endAt = Date.now() + st.remaining * 1000; }
+        save(); renderMain(); upd();
       }
       function setDur(sec) { st.dur = Math.max(0, sec); st.remaining = st.dur; st.endAt = null; rang = false; ctx.el.classList.remove('is-done'); save(); renderMain(); upd(); }
       function edit() {
@@ -185,12 +192,7 @@ const WIDGETS = {
       b.addEventListener('click', e => {
         const m = e.target.closest('[data-m]'); if (m) { editing = false; setDur(+m.dataset.m * 60); return; }
         const a = e.target.closest('[data-act]'); if (!a) return;
-        if (a.dataset.act === 'go') {
-          editing = false;
-          if (st.endAt) { st.remaining = left(); st.endAt = null; }
-          else { if (st.remaining <= 0) { st.remaining = st.dur; ctx.el.classList.remove('is-done'); rang = false; } if (st.remaining > 0) st.endAt = Date.now() + st.remaining * 1000; }
-          save(); renderMain(); upd();
-        }
+        if (a.dataset.act === 'go') toggle();
         if (a.dataset.act === 'reset') { editing = false; setDur(st.dur); }
         if (a.dataset.act === 'plus' || a.dataset.act === 'minus') {
           const d = a.dataset.act === 'plus' ? 60 : -60;
@@ -275,7 +277,7 @@ const WIDGETS = {
     }
   },
 
-  /* ----- Groupes ----- */
+  /* ----- Groupes (avec glisser-déposer des noms) ----- */
   groups: {
     icon: 'user-multiple-group', w: 620, h: 400, init: () => ({ classId: null, mode: 'count', n: 4, groups: [], view: 'groups' }),
     mount(b, wd) {
@@ -290,7 +292,7 @@ const WIDGETS = {
             <input class="inp" type="number" min="1" max="40" value="${st.n}" data-role="n" style="width:4.5em" aria-label="n">
             <button class="btn" data-act="make">${T('makeGroups')}</button>
             <button class="btn btn--s btn--ghost" data-act="view">${st.view === 'groups' ? T('presence') : T('back')}</button></div>
-          ${st.view === 'groups' ? (st.groups.length ? `<div class="grp-grid">${st.groups.map((g, i) => `<div class="grp"><h4>${T('group')} ${i + 1}</h4><ul>${g.map(id => names(id)).filter(Boolean).map(n => `<li>${esc(n)}</li>`).join('')}</ul></div>`).join('')}</div>`
+          ${st.view === 'groups' ? (st.groups.length ? `<div class="hint" style="padding:0 10px">${T('dragHint')}</div><div class="grp-grid">${st.groups.map((g, i) => `<div class="grp" data-g="${i}"><h4>${T('group')} ${i + 1}</h4><ul>${g.filter(id => names(id)).map(id => `<li class="gname" data-id="${id}">${esc(names(id))}</li>`).join('')}</ul></div>`).join('')}</div>`
             : `<div class="big"><p class="lbl-s">${T('groupsHint')}</p></div>`)
           : `<div class="hint" style="padding-top:4px">${T('presenceHint')}</div><div class="panel-sub">${presenceChips(cls)}</div>`}`;
       }
@@ -314,46 +316,98 @@ const WIDGETS = {
           st.groups = g; st.view = 'groups'; save(); render();
         }
       });
+      // Glisser un nom vers un autre groupe (souris, stylet, écran tactile)
+      b.addEventListener('pointerdown', e => {
+        const li = e.target.closest('.gname'); if (!li || e.button > 0) return;
+        e.preventDefault(); e.stopPropagation();
+        const id = li.dataset.id, from = +li.closest('.grp').dataset.g;
+        const ghost = li.cloneNode(true); ghost.classList.add('gghost'); document.body.appendChild(ghost);
+        const place = ev => { ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px'; };
+        place(e); li.classList.add('is-drag');
+        let over = null;
+        const mv = ev => {
+          place(ev);
+          const t = document.elementFromPoint(ev.clientX, ev.clientY); const g = t && t.closest('.grp');
+          const ok = g && b.contains(g) ? g : null;
+          if (over && over !== ok) over.classList.remove('is-over');
+          over = ok; if (over) over.classList.add('is-over');
+        };
+        const up = () => {
+          document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+          ghost.remove(); li.classList.remove('is-drag');
+          if (over) { const to = +over.dataset.g; if (to !== from) { st.groups[from] = st.groups[from].filter(x => x !== id); st.groups[to].push(id); save(); } }
+          render();
+        };
+        document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+      });
       render();
     }
   },
 
-  /* ----- Dé ----- */
+  /* ----- Dés : d4, d6, d8, d10, d12, d20, pièce ----- */
   dice: {
-    icon: 'dices-entertainment-gaming-dices', w: 380, h: 300, init: () => ({ count: 1, values: [6] }),
+    icon: 'dices-entertainment-gaming-dices', w: 420, h: 320, init: () => ({ kind: 'd6', count: 1, values: [6] }),
     mount(b, wd) {
-      const st = wd.state;
+      const st = wd.state; st.kind = st.kind || 'd6';
+      const KINDS = { d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20, coin: 2 };
+      const SHAPES = { d4: '50,6 95,90 5,90', d8: '50,3 95,50 50,97 5,50', d10: '50,3 95,42 50,97 5,42', d12: '50,3 96,36 79,92 21,92 4,36', d20: '50,2 93,26 93,74 50,98 7,74 7,26' };
       const PIPS = { 1: [5], 2: [3, 7], 3: [3, 5, 7], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9] };
-      const face = v => `<div class="die" role="img" aria-label="${v}">${Array.from({ length: 9 }, (_, i) => PIPS[v].includes(i + 1) ? '<i></i>' : '<span></span>').join('')}</div>`;
+      const face = v => {
+        if (st.kind === 'd6') return `<div class="die" role="img" aria-label="${v}">${Array.from({ length: 9 }, (_, i) => PIPS[v].includes(i + 1) ? '<i></i>' : '<span></span>').join('')}</div>`;
+        if (st.kind === 'coin') { const l = v === 1 ? T('heads') : T('tails'); return `<div class="die die--coin" role="img" aria-label="${l}"><span>${l}</span></div>`; }
+        const ty = st.kind === 'd4' ? 70 : 58;
+        return `<svg class="die die--poly" viewBox="0 0 100 100" role="img" aria-label="${v}"><polygon points="${SHAPES[st.kind]}" fill="#fff" stroke="#000" stroke-width="4" stroke-linejoin="round"/><text x="50" y="${ty}" text-anchor="middle" font-size="${v > 9 ? 30 : 36}" font-weight="700" fill="#88004A">${v}</text></svg>`;
+      };
+      const roll = () => Array.from({ length: st.count }, () => 1 + Math.floor(Math.random() * KINDS[st.kind]));
       function render(anim) {
-        b.innerHTML = `<div class="big"><div><div class="dice-row">${st.values.map(face).join('')}</div>${st.count > 1 ? `<div class="dice-sum">${T('total')} : ${st.values.reduce((a, c) => a + c, 0)}</div>` : ''}</div></div>
-          <div class="ctl"><label class="lbl-s">${T('dice')}</label><select class="inp" data-role="count">${[1, 2, 3, 4, 5, 6].map(n => `<option ${n === st.count ? 'selected' : ''}>${n}</option>`).join('')}</select>
-          <button class="btn" data-act="roll">${T('roll')}</button></div>`;
+        const sum = st.values.reduce((a, c) => a + c, 0);
+        b.innerHTML = `<div class="big"><div><div class="dice-row">${st.values.map(face).join('')}</div>${st.count > 1 && st.kind !== 'coin' ? `<div class="dice-sum">${T('total')} : ${sum}</div>` : ''}</div></div>
+          <div class="ctl"><select class="inp" data-role="kind" aria-label="${T('diceType')}">${Object.keys(KINDS).map(k => `<option value="${k}" ${k === st.kind ? 'selected' : ''}>${k === 'coin' ? T('coin') : k.toUpperCase().replace('D', T('dieShort'))}</option>`).join('')}</select>
+          <select class="inp" data-role="count" aria-label="${T('dice')}">${[1, 2, 3, 4, 5, 6].map(n => `<option ${n === st.count ? 'selected' : ''}>${n}</option>`).join('')}</select>
+          <button class="btn" data-act="roll">${st.kind === 'coin' ? T('flip') : T('roll')}</button></div>`;
         if (anim) b.querySelectorAll('.die').forEach(d => d.classList.add('is-roll'));
       }
-      b.addEventListener('change', e => { if (e.target.dataset.role === 'count') { st.count = +e.target.value; st.values = Array.from({ length: st.count }, () => 1 + Math.floor(Math.random() * 6)); save(); render(true); } });
-      b.addEventListener('click', e => { if (e.target.closest('[data-act=roll]')) { st.values = Array.from({ length: st.count }, () => 1 + Math.floor(Math.random() * 6)); save(); render(true); } });
+      b.addEventListener('change', e => {
+        if (e.target.dataset.role === 'count') st.count = +e.target.value;
+        if (e.target.dataset.role === 'kind') st.kind = e.target.value;
+        st.values = roll(); save(); render(true);
+      });
+      b.addEventListener('click', e => { if (e.target.closest('[data-act=roll]')) { st.values = roll(); save(); render(true); } });
+      if (st.values.some(v => v > KINDS[st.kind])) st.values = roll();
       render();
     }
   },
 
-  /* ----- Compte à rebours d'un évènement ----- */
+  /* ----- Compte à rebours (manuel ou évènement de l'espace prof) ----- */
   countdown: {
-    icon: 'blank-calendar', w: 520, h: 280, init: () => ({ title: '', target: '', daysOnly: false }),
+    icon: 'blank-calendar', w: 520, h: 280, init: () => ({ title: '', target: '', daysOnly: false, eventId: null }),
     mount(b, wd) {
-      const st = wd.state; let editing = !st.target;
+      const st = wd.state; let editing = !st.target && !st.eventId;
+      const evOf = () => st.eventId ? (S.events || []).find(e => e.id === st.eventId) : null;
+      const cur = () => { const e = evOf(); return e ? { title: e.title, target: e.date } : { title: st.title, target: st.target }; };
       function render() {
         if (editing) {
+          const evs = (S.events || []).slice().sort((a, c) => a.date.localeCompare(c.date));
           b.innerHTML = `<div class="big"><form class="cd-form">
+            ${evs.length ? `<label class="field"><span>${T('fromAgenda')}</span><select class="inp" name="ev"><option value="">${T('manualEvent')}</option>${evs.map(e => `<option value="${e.id}" ${e.id === st.eventId ? 'selected' : ''}>${esc(e.title)} · ${new Date(e.date).toLocaleDateString(locale())}</option>`).join('')}</select></label>` : `<p class="lbl-s" style="margin:0">${T('eventsTip')}</p>`}
+            <div data-role="manual" class="cd-form" style="padding:0">
             <label class="field"><span>${T('eventName')}</span><input class="inp" name="t" value="${esc(st.title)}" placeholder="${T('eventPh')}"></label>
-            <label class="field"><span>${T('eventDate')}</span><input class="inp" type="datetime-local" name="d" value="${esc(st.target)}" required></label>
+            <label class="field"><span>${T('eventDate')}</span><input class="inp" type="datetime-local" name="d" value="${esc(st.target)}"></label></div>
             <label class="chk"><input type="checkbox" name="o" ${st.daysOnly ? 'checked' : ''}> ${T('daysOnly')}</label>
             <div class="row"><button class="btn">OK</button></div></form></div>`;
-          const f = $('form', b);
-          f.onsubmit = e => { e.preventDefault(); st.title = f.t.value.trim(); st.target = f.d.value; st.daysOnly = f.o.checked; editing = false; save(); render(); };
+          const f = $('form', b), man = $('[data-role=manual]', b);
+          const sync = () => { man.hidden = !!(f.ev && f.ev.value); };
+          if (f.ev) f.ev.onchange = sync; sync();
+          f.onsubmit = e => {
+            e.preventDefault();
+            st.eventId = f.ev && f.ev.value ? f.ev.value : null;
+            if (!st.eventId) { if (!f.d.value) { f.d.focus(); return; } st.title = f.t.value.trim(); st.target = f.d.value; }
+            st.daysOnly = f.o.checked; editing = false; save(); render();
+          };
           return;
         }
-        b.innerHTML = `<div class="big"><div><div class="cd-title">${esc(st.title || T('countdown'))}</div><div class="cd-units"></div><div class="lbl-s" data-role="when" style="margin-top:.4em"></div></div></div>
+        const c = cur();
+        b.innerHTML = `<div class="big"><div><div class="cd-title">${esc(c.title || T('countdown'))}</div><div class="cd-units"></div><div class="lbl-s" data-role="when" style="margin-top:.4em"></div></div></div>
           <div class="ctl"><button class="btn btn--s btn--ghost" data-act="edit">${T('edit')}</button></div>`;
         $('[data-act=edit]', b).onclick = () => { editing = true; render(); };
         upd();
@@ -361,14 +415,17 @@ const WIDGETS = {
       function upd() {
         if (editing) return;
         const box = $('.cd-units', b); if (!box) return;
-        const t = new Date(st.target).getTime(); let s = Math.floor((t - Date.now()) / 1000);
-        $('[data-role=when]', b).textContent = new Date(st.target).toLocaleString(locale(), { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+        const c = cur(); if (!c.target) { box.innerHTML = `<p class="lbl-s">${T('eventGone')}</p>`; return; }
+        const t = new Date(c.target).getTime(); let s = Math.floor((t - Date.now()) / 1000);
+        $('[data-role=when]', b).textContent = new Date(c.target).toLocaleString(locale(), { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
         if (!(s > 0)) { box.innerHTML = `<div class="done-msg">${T('eventNow')}</div>`; return; }
         if (st.daysOnly) { const dd = Math.ceil(s / 86400); box.innerHTML = `<div class="cd-unit"><b>${dd}</b><span>${dd > 1 ? T('days') : T('day')}</span></div>`; return; }
         const u = [[Math.floor(s / 86400), T('days')], [Math.floor(s % 86400 / 3600), T('hours')], [Math.floor(s % 3600 / 60), T('minutes')], [s % 60, T('seconds')]];
         box.innerHTML = u.map(([v, l]) => `<div class="cd-unit"><b>${l === T('days') ? v : pad(v)}</b><span>${l}</span></div>`).join('');
       }
-      render(); tickers.add(upd); return () => tickers.delete(upd);
+      const onEv = () => { if (!editing) render(); };
+      window.addEventListener('didac-events', onEv);
+      render(); tickers.add(upd); return () => { tickers.delete(upd); window.removeEventListener('didac-events', onEv); };
     }
   },
 
@@ -451,22 +508,27 @@ const WIDGETS = {
     }
   },
 
-  /* ----- Dessin ----- */
+  /* ----- Dessin (crayon + formes toutes faites) ----- */
   draw: {
-    icon: 'paint-palette', w: 640, h: 440, init: () => ({ img: '', color: '#000000', size: 6 }),
+    icon: 'paint-palette', w: 680, h: 460, init: () => ({ img: '', color: '#000000', size: 6, tool: 'pen', fill: false }),
     mount(b, wd) {
-      const st = wd.state;
+      const st = wd.state; st.tool = st.tool || 'pen';
       const COLORS = ['#000000', '#88004A', '#575757', '#29B8D8', '#8CC63F', '#F5C300', '#F07D00', '#E8507A'];
+      const TOOLS = [['pen', '✎'], ['line', '╱'], ['arrow', '➜'], ['rect', '▭'], ['ellipse', '◯'], ['triangle', '△'], ['star', '☆']];
       b.innerHTML = `<div class="dr-tools">
+          <div class="dr-shapes" role="group" aria-label="${T('shapes')}">${TOOLS.map(([k, g]) => `<button class="tb" data-tool="${k}" aria-pressed="${st.tool === k}" title="${T('sh_' + k)}" aria-label="${T('sh_' + k)}">${g}</button>`).join('')}</div>
+          <label class="chk" title="${T('fillShape')}"><input type="checkbox" data-role="fill" ${st.fill ? 'checked' : ''}> ${T('fill')}</label>
+          <span class="dock-sep" style="margin:2px"></span>
           ${COLORS.map(c => `<button class="sw" style="background:${c}" data-c="${c}" aria-label="${c}" aria-pressed="${st.color === c}"></button>`).join('')}
           <button class="tb" data-c="eraser" aria-pressed="${st.color === 'eraser'}">${T('eraser')}</button>
           <select class="inp" data-role="size" aria-label="${T('thickness')}">${[3, 6, 12, 24].map(s => `<option value="${s}" ${s === st.size ? 'selected' : ''}>${s} px</option>`).join('')}</select>
           <span class="sp" style="flex:1"></span>
+          <button class="btn btn--s btn--ghost" data-act="undo" title="${T('undo')}">↶</button>
           <button class="btn btn--s btn--ghost" data-act="clear">${T('clear')}</button>
           <button class="btn btn--s" data-act="png">PNG</button>
         </div><div class="dr-canvas"><canvas></canvas></div>`;
       const wrap = $('.dr-canvas', b), cv = $('canvas', b), g = cv.getContext('2d');
-      let drawing = false, last = null, saveTimer = null;
+      let drawing = false, last = null, start = null, snap = null, saveTimer = null; const hist = [];
       function loadImg() { if (!st.img) return; const im = new Image(); im.onload = () => g.drawImage(im, 0, 0, im.width, im.height); im.src = st.img; }
       function fit() {
         const r = wrap.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1;
@@ -478,56 +540,122 @@ const WIDGETS = {
       }
       const ro = new ResizeObserver(fit); ro.observe(wrap);
       const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; };
-      cv.addEventListener('pointerdown', e => { drawing = true; cv.setPointerCapture(e.pointerId); last = pos(e); stroke(last, last); });
-      cv.addEventListener('pointermove', e => { if (!drawing) return; const p = pos(e); stroke(last, p); last = p; });
-      const end = () => { if (!drawing) return; drawing = false; clearTimeout(saveTimer); saveTimer = setTimeout(() => { st.img = cv.toDataURL('image/png'); save(); }, 400); };
+      const pen = () => { const dpr = window.devicePixelRatio || 1; const col = st.color === 'eraser' ? '#fff' : st.color; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = (st.color === 'eraser' ? st.size * 3 : st.size) * dpr; g.lineCap = 'round'; g.lineJoin = 'round'; };
+      cv.addEventListener('pointerdown', e => {
+        drawing = true; cv.setPointerCapture(e.pointerId); last = start = pos(e);
+        hist.push(g.getImageData(0, 0, cv.width, cv.height)); if (hist.length > 15) hist.shift();
+        if (st.tool === 'pen' || st.color === 'eraser') stroke(last, last); else snap = hist[hist.length - 1];
+      });
+      cv.addEventListener('pointermove', e => {
+        if (!drawing) return; const p = pos(e);
+        if (st.tool === 'pen' || st.color === 'eraser') { stroke(last, p); last = p; }
+        else { g.putImageData(snap, 0, 0); shape(start, p, e.shiftKey); }
+      });
+      const end = () => { if (!drawing) return; drawing = false; snap = null; clearTimeout(saveTimer); saveTimer = setTimeout(() => { st.img = cv.toDataURL('image/png'); save(); }, 400); };
       cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
-      function stroke(a, c) {
-        const dpr = window.devicePixelRatio || 1;
-        g.strokeStyle = st.color === 'eraser' ? '#fff' : st.color; g.lineWidth = (st.color === 'eraser' ? st.size * 3 : st.size) * dpr; g.lineCap = 'round'; g.lineJoin = 'round';
-        g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(c[0], c[1]); g.stroke();
+      function stroke(a, c) { pen(); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(c[0], c[1]); g.stroke(); }
+      function shape(a, c, square) {
+        pen();
+        let [x0, y0] = a, [x1, y1] = c;
+        if (square && st.tool !== 'line' && st.tool !== 'arrow') { const d = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)); x1 = x0 + Math.sign(x1 - x0 || 1) * d; y1 = y0 + Math.sign(y1 - y0 || 1) * d; }
+        const fill = st.fill && !['line', 'arrow'].includes(st.tool);
+        g.beginPath();
+        if (st.tool === 'line') { g.moveTo(x0, y0); g.lineTo(x1, y1); }
+        if (st.tool === 'arrow') {
+          g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.beginPath();
+          const ang = Math.atan2(y1 - y0, x1 - x0), hl = Math.max(14, g.lineWidth * 4);
+          g.moveTo(x1, y1); g.lineTo(x1 - hl * Math.cos(ang - 0.45), y1 - hl * Math.sin(ang - 0.45)); g.lineTo(x1 - hl * Math.cos(ang + 0.45), y1 - hl * Math.sin(ang + 0.45)); g.closePath(); g.fill();
+          return;
+        }
+        if (st.tool === 'rect') g.rect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0));
+        if (st.tool === 'ellipse') g.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, Math.PI * 2);
+        if (st.tool === 'triangle') { g.moveTo((x0 + x1) / 2, Math.min(y0, y1)); g.lineTo(Math.max(x0, x1), Math.max(y0, y1)); g.lineTo(Math.min(x0, x1), Math.max(y0, y1)); g.closePath(); }
+        if (st.tool === 'star') {
+          const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = Math.abs(x1 - x0) / 2, ry = Math.abs(y1 - y0) / 2;
+          for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.45 : 1, an = -Math.PI / 2 + i * Math.PI / 5; const px = cx + rx * r * Math.cos(an), py = cy + ry * r * Math.sin(an); i ? g.lineTo(px, py) : g.moveTo(px, py); }
+          g.closePath();
+        }
+        fill ? g.fill() : g.stroke();
       }
       b.addEventListener('click', e => {
+        const tl = e.target.closest('[data-tool]');
+        if (tl) { st.tool = tl.dataset.tool; if (st.color === 'eraser') { st.color = '#000000'; b.querySelectorAll('[data-c]').forEach(x => x.setAttribute('aria-pressed', x.dataset.c === st.color)); } b.querySelectorAll('[data-tool]').forEach(x => x.setAttribute('aria-pressed', x === tl)); save(); return; }
         const c = e.target.closest('[data-c]');
         if (c) { st.color = c.dataset.c; b.querySelectorAll('[data-c]').forEach(x => x.setAttribute('aria-pressed', x === c)); save(); return; }
         const a = e.target.closest('[data-act]'); if (!a) return;
-        if (a.dataset.act === 'clear') { g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); st.img = ''; save(); }
+        if (a.dataset.act === 'undo' && hist.length) { const im = hist.pop(); if (im.width === cv.width && im.height === cv.height) g.putImageData(im, 0, 0); st.img = cv.toDataURL('image/png'); save(); }
+        if (a.dataset.act === 'clear') { hist.push(g.getImageData(0, 0, cv.width, cv.height)); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); st.img = ''; save(); }
         if (a.dataset.act === 'png') { const l = document.createElement('a'); l.download = `${T('drawing')}-${todayISO()}.png`; l.href = cv.toDataURL('image/png'); l.click(); }
       });
-      b.addEventListener('change', e => { if (e.target.dataset.role === 'size') { st.size = +e.target.value; save(); } });
+      b.addEventListener('change', e => {
+        if (e.target.dataset.role === 'size') { st.size = +e.target.value; save(); }
+        if (e.target.dataset.role === 'fill') { st.fill = e.target.checked; save(); }
+      });
       return () => { ro.disconnect(); clearTimeout(saveTimer); };
     }
   },
 
-  /* ----- Planning de la leçon (liste à cocher) ----- */
+  /* ----- Planning de la leçon (icônes Didac, liste ou checklist) ----- */
   plan: {
-    icon: 'task-list', w: 380, h: 380, init: () => ({ title: '', items: [] }),
+    icon: 'task-list', w: 400, h: 400, init: () => ({ title: '', items: [], mode: 'check' }),
     mount(b, wd) {
-      const st = wd.state; let editing = !st.items.length;
+      const st = wd.state; st.mode = st.mode || 'check';
+      let editing = !st.items.length, draft = null;
       function render() {
         if (editing) {
+          draft = draft || st.items.map(i => ({ ...i }));
+          if (!draft.length) draft.push({ t: '', d: false, icon: '' });
           b.innerHTML = `<div class="panel-sub" style="padding:10px;gap:8px">
             <label class="field"><span>${T('planTitle')}</span><input class="inp" data-role="title" value="${esc(st.title)}" placeholder="${T('w_plan')}"></label>
-            <label class="field"><span>${T('planItems')}</span><textarea class="inp" data-role="items" style="min-height:140px" placeholder="${T('planPh')}">${esc(st.items.map(i => i.t).join('\n'))}</textarea></label>
-            <div class="row"><button class="btn" data-act="ok">OK</button></div></div>`;
+            <div class="row"><span class="lbl-s">${T('display')}</span><div class="seg-s" role="group">${['check', 'list'].map(m => `<button data-mode="${m}" aria-pressed="${st.mode === m}">${T('plan_' + m)}</button>`).join('')}</div></div>
+            <div class="plan-edit">${draft.map((it, i) => `<div class="plan-erow">
+              <button class="ic-btn" data-pick="${i}" title="${T('chooseIcon')}" aria-label="${T('chooseIcon')}">${it.icon ? ICON(it.icon) : '<span>+</span>'}</button>
+              <input class="inp" data-t="${i}" value="${esc(it.t)}" placeholder="${T('activity')} ${i + 1}">
+              <button class="w-x" data-up="${i}" aria-label="↑" title="↑">↑</button><button class="w-x" data-del="${i}" aria-label="${T('delete')}" title="${T('delete')}">×</button></div>`).join('')}</div>
+            <div class="row"><button class="btn btn--s btn--ghost" data-act="addrow">+ ${T('addActivity')}</button><span style="flex:1"></span><button class="btn" data-act="ok">OK</button></div></div>`;
           return;
         }
-        b.innerHTML = `${st.title ? `<div class="plan-title">${esc(st.title)}</div>` : ''}<div class="plan-list">${st.items.map((it, i) => `<label class="plan-item ${it.d ? 'is-done' : ''}"><span class="plan-n">${i + 1}</span><span class="plan-t">${esc(it.t)}</span><input type="checkbox" data-i="${i}" ${it.d ? 'checked' : ''}></label>`).join('')}</div>
-          <div class="ctl"><button class="btn btn--s btn--ghost" data-act="edit">${T('edit')}</button><button class="btn btn--s btn--ghost" data-act="uncheck">${T('uncheckAll')}</button></div>`;
+        b.innerHTML = `${st.title ? `<div class="plan-title">${esc(st.title)}</div>` : ''}<div class="plan-list">${st.items.map((it, i) => {
+          const lead = it.icon ? `<span class="plan-ic">${ICON(it.icon)}</span>` : `<span class="plan-n">${i + 1}</span>`;
+          return st.mode === 'check'
+            ? `<label class="plan-item ${it.d ? 'is-done' : ''}">${lead}<span class="plan-t">${esc(it.t)}</span><input type="checkbox" data-i="${i}" ${it.d ? 'checked' : ''}></label>`
+            : `<div class="plan-item">${lead}<span class="plan-t">${esc(it.t)}</span></div>`;
+        }).join('')}</div>
+          <div class="ctl"><button class="btn btn--s btn--ghost" data-act="edit">${T('edit')}</button>${st.mode === 'check' ? `<button class="btn btn--s btn--ghost" data-act="uncheck">${T('uncheckAll')}</button>` : ''}</div>`;
       }
+      const readDraft = () => { b.querySelectorAll('[data-t]').forEach(inp => { draft[+inp.dataset.t].t = inp.value; }); const ti = $('[data-role=title]', b); if (ti) st.title = ti.value.trim(); };
       b.addEventListener('change', e => { if (e.target.dataset.i !== undefined) { st.items[+e.target.dataset.i].d = e.target.checked; save(); render(); } });
       b.addEventListener('click', e => {
+        const md = e.target.closest('[data-mode]'); if (md) { readDraft(); st.mode = md.dataset.mode; save(); render(); return; }
+        const pk = e.target.closest('[data-pick]');
+        if (pk) { readDraft(); const i = +pk.dataset.pick; iconPicker(draft[i].icon, ic => { draft[i].icon = ic; render(); }); return; }
+        const up = e.target.closest('[data-up]'); if (up) { readDraft(); const i = +up.dataset.up; if (i > 0) [draft[i - 1], draft[i]] = [draft[i], draft[i - 1]]; render(); return; }
+        const del = e.target.closest('[data-del]'); if (del) { readDraft(); draft.splice(+del.dataset.del, 1); render(); return; }
         const a = e.target.closest('[data-act]'); if (!a) return;
-        if (a.dataset.act === 'edit') { editing = true; render(); }
+        if (a.dataset.act === 'addrow') { readDraft(); draft.push({ t: '', d: false, icon: '' }); render(); const ins = b.querySelectorAll('[data-t]'); ins[ins.length - 1].focus(); }
+        if (a.dataset.act === 'edit') { editing = true; draft = null; render(); }
         if (a.dataset.act === 'uncheck') { st.items.forEach(i => i.d = false); save(); render(); }
-        if (a.dataset.act === 'ok') {
-          const old = st.items;
-          st.title = $('[data-role=title]', b).value.trim();
-          st.items = $('[data-role=items]', b).value.split(/\r?\n/).map(x => x.trim()).filter(Boolean).map(t => ({ t, d: (old.find(o => o.t === t) || {}).d || false }));
-          editing = !st.items.length; save(); render();
-        }
+        if (a.dataset.act === 'ok') { readDraft(); st.items = draft.map(i => ({ ...i, t: i.t.trim() })).filter(i => i.t || i.icon); draft = null; editing = !st.items.length; save(); render(); }
       });
+      b.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.t !== undefined) { e.preventDefault(); $('[data-act=addrow]', b).click(); } });
       render();
+    }
+  },
+
+  /* ----- Sticker (icône Didac posée sur la page) ----- */
+  sticker: {
+    icon: 'star-1', w: 180, h: 200, cls: 'w--sticker', init: () => ({ icon: '', label: '' }),
+    mount(b, wd) {
+      const st = wd.state;
+      function render() {
+        if (!st.icon) { b.innerHTML = `<div class="big"><button class="btn btn--s" data-act="pick">${T('chooseIcon')}</button></div>`; return; }
+        b.innerHTML = `<button class="stk" data-act="pick" title="${T('changeIcon')}">${ICON(st.icon)}</button>
+          <input class="stk-lbl" data-role="lbl" value="${esc(st.label)}" placeholder="${T('stickerLabel')}" aria-label="${T('stickerLabel')}">`;
+      }
+      b.addEventListener('click', e => { if (e.target.closest('[data-act=pick]')) iconPicker(st.icon, ic => { st.icon = ic; save(); render(); }); });
+      b.addEventListener('input', e => { if (e.target.dataset.role === 'lbl') { st.label = e.target.value; save(); } });
+      render();
+      if (!st.icon) setTimeout(() => iconPicker('', ic => { st.icon = ic; save(); render(); }), 50);
     }
   },
 
@@ -545,7 +673,17 @@ const WIDGETS = {
     }
   }
 };
-const ORDER = ['clock', 'timer', 'stopwatch', 'random', 'groups', 'dice', 'countdown', 'plan', 'text', 'image', 'calc', 'draw'];
+const ORDER = ['clock', 'timer', 'stopwatch', 'random', 'groups', 'dice', 'countdown', 'plan', 'text', 'sticker', 'image', 'calc', 'draw'];
+
+/* ---------- Choix d'une icône Didac (planning, stickers) ---------- */
+function iconPicker(current, onPick) {
+  const names = Object.keys(window.DIDAC_ICONS || {}).filter(k => k.startsWith('couleur/')).map(k => k.slice(8));
+  openDlg(`<h2>${T('chooseIcon')}</h2>
+    <div class="ic-grid">${names.map(n => `<button class="ic-btn ic-btn--l" data-ic="${n}" aria-pressed="${n === current}" title="${n.replace(/-/g, ' ')}" aria-label="${n.replace(/-/g, ' ')}">${ICON(n)}</button>`).join('')}</div>
+    <div class="row"><button class="btn btn--ghost btn--s" data-ic="">${T('noIcon')}</button><span style="flex:1"></span><span class="lbl-s">${T('iconCredit')}</span><button class="btn btn--ghost" data-act="closeDlg">${T('cancel')}</button></div>`, body => {
+    body.onclick = e => { const b = e.target.closest('[data-ic]'); if (!b) return; closeDlg(); onPick(b.dataset.ic); };
+  });
+}
 
 /* ---------- Images : réduction avant stockage local ---------- */
 function shrinkImage(file, max) {
@@ -642,13 +780,21 @@ function placeEl(el, wd) { el.style.left = wd.x + 'px'; el.style.top = wd.y + 'p
 function mountWidget(wd) {
   const def = WIDGETS[wd.type]; if (!def) return;
   const el = h(`<section class="w" data-id="${wd.id}" aria-label="${T('w_' + wd.type)}">
-    <div class="w-head"><span class="w-title">${T('w_' + wd.type)}</span><button class="w-x" title="${T('close')}" aria-label="${T('close')}">×</button></div>
+    <div class="w-head"><span class="w-title">${T('w_' + wd.type)}</span>${def.compact ? `<button class="w-opt" data-act="compact" aria-pressed="${!!wd.state.compact}">${wd.state.compact ? T('fullView') : T('lightView')}</button>` : ''}<button class="w-x" title="${T('close')}" aria-label="${T('close')}">×</button></div>
     <div class="w-body"></div><div class="w-resize" title="${T('resize')}"></div></section>`);
   board.appendChild(el); clampBox(wd); placeEl(el, wd);
   const body = $('.w-body', el);
   const ctx = { el };
+  el.classList.toggle('is-compact', !!wd.state.compact);
+  if (def.cls) el.classList.add(def.cls);
   const cleanup = def.mount(body, wd, ctx);
   mounted.set(wd.id, { el, cleanup });
+  const opt = $('.w-opt', el);
+  if (opt) opt.onclick = () => {
+    wd.state.compact = !wd.state.compact;
+    if (wd.state.compact) { wd.h = Math.min(wd.h, 200); wd.w = Math.min(wd.w, 380); } else { wd.h = Math.max(wd.h, def.h); wd.w = Math.max(wd.w, def.w); }
+    save(); remount(wd);
+  };
 
   el.addEventListener('pointerdown', () => { if ((wd.z || 0) < S.z) { wd.z = ++S.z; el.style.zIndex = wd.z; save(); } }, true);
   $('.w-x', el).onclick = () => removeWidget(wd.id);
@@ -667,10 +813,14 @@ function dragify(handle, move, getStart) {
     handle.addEventListener('pointermove', mv); handle.addEventListener('pointerup', up); handle.addEventListener('pointercancel', up);
   });
 }
-function addWidget(type) {
+function remount(wd) {
+  const m = mounted.get(wd.id); if (m) { try { m.cleanup && m.cleanup(); } catch (e) { } m.el.remove(); mounted.delete(wd.id); }
+  mountWidget(wd);
+}
+function addWidget(type, state) {
   const def = WIDGETS[type], p = page(), r = board.getBoundingClientRect();
   const n = p.widgets.length;
-  const wd = { id: uid(), type, w: def.w, h: def.h, x: Math.max(8, (r.width - def.w) / 2 + (n % 6) * 28 - 70), y: Math.max(8, (r.height - def.h) / 2 + (n % 6) * 28 - 70), z: ++S.z, state: def.init() };
+  const wd = { id: uid(), type, w: def.w, h: def.h, x: Math.max(8, (r.width - def.w) / 2 + (n % 6) * 28 - 70), y: Math.max(8, (r.height - def.h) / 2 + (n % 6) * 28 - 70), z: ++S.z, state: Object.assign(def.init(), state || {}) };
   p.widgets.push(wd); save(); mountWidget(wd); $('#empty').hidden = true;
 }
 function removeWidget(id) {
@@ -830,7 +980,7 @@ let rzT; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setT
 /* ---------- API partagée avec prof.js ---------- */
 window.DidacApp = {
   T, esc, uid, h, $, LS, ICON, pad, todayISO, locale, download, exportPDF, openDlg, closeDlg, confirmBox, openClasses,
-  get state() { return S; }, classById, save
+  get state() { return S; }, classById, save, addWidget, iconPicker
 };
 
 applyStatic(); renderTabs(); renderBoard();

@@ -1,6 +1,13 @@
 /* Textes FR / DE du tableau de classe Didac. Espace insécable ( ) avant « : ; ? ! » en français. */
 window.DIDAC_I18N = {
 fr: {
+  lightView: 'Allégé', fullView: 'Complet', clickToStart: 'Clique pour démarrer ou mettre en pause', dragHint: 'Glisse un nom vers un autre groupe pour le changer de groupe.',
+  diceType: 'Type de dé', coin: 'Pièce', dieShort: 'D', heads: 'Pile', tails: 'Face', flip: 'Lancer la pièce',
+  fromAgenda: 'Évènement de l’espace prof', manualEvent: 'Autre (saisir ci-dessous)', eventsTip: 'Astuce : planifie tes évènements dans Espace prof › Agenda pour les choisir ici.', eventGone: 'Cet évènement a été supprimé. Clique sur « Modifier ».',
+  shapes: 'Formes', sh_pen: 'Crayon', sh_line: 'Ligne', sh_arrow: 'Flèche', sh_rect: 'Rectangle', sh_ellipse: 'Cercle', sh_triangle: 'Triangle', sh_star: 'Étoile', fill: 'Plein', fillShape: 'Remplir les formes', undo: 'Annuler',
+  plan_check: 'Checklist', plan_list: 'Liste', chooseIcon: 'Choisir une icône', changeIcon: 'Changer l’icône', activity: 'Activité', addActivity: 'Activité', noIcon: 'Sans icône', iconCredit: 'Icônes : Streamline (streamlinehq.com)',
+  w_sticker: 'Sticker', stickerLabel: 'Légende (facultatif)',
+  events: 'Évènements', showCountdown: 'Compte à rebours sur le tableau', noEvents: 'Aucun évènement planifié.', eventsNote: 'Les évènements ne sont pas chiffrés : le compte à rebours du tableau les affiche sans mot de passe.', delEventQ: 'Supprimer l’évènement « {e} » ?',
   appTitle: 'Tableau de classe Didac', claim: 'Ton année. Une longueur d’avance.',
   emptyTitle: 'Ton tableau est prêt !', emptyText: 'Choisis un outil dans la barre du bas. Déplace-le par sa barre de titre et agrandis-le par le coin en bas à droite.',
   classes: 'Classes', profSpace: 'Espace prof', fullscreen: 'Plein écran', exitFull: 'Quitter le plein écran',
@@ -56,6 +63,13 @@ fr: {
   dangerZone: 'Tout effacer', wipeText: 'Supprime l’espace prof de ce navigateur (agenda, absences, notes, checklist). Les classes et les pages restent.', wipe: 'Effacer l’espace prof', wipeQ: 'Effacer définitivement l’espace prof de ce navigateur ?'
 },
 de: {
+  lightView: 'Schlank', fullView: 'Komplett', clickToStart: 'Klicke zum Starten oder Pausieren', dragHint: 'Ziehe einen Namen in eine andere Gruppe, um ihn zu verschieben.',
+  diceType: 'Würfeltyp', coin: 'Münze', dieShort: 'W', heads: 'Kopf', tails: 'Zahl', flip: 'Münze werfen',
+  fromAgenda: 'Ereignis aus dem Lehrpersonen-Bereich', manualEvent: 'Anderes (unten eingeben)', eventsTip: 'Tipp: Plane deine Ereignisse im Lehrpersonen-Bereich › Agenda, dann kannst du sie hier wählen.', eventGone: 'Dieses Ereignis wurde gelöscht. Klicke auf «Bearbeiten».',
+  shapes: 'Formen', sh_pen: 'Stift', sh_line: 'Linie', sh_arrow: 'Pfeil', sh_rect: 'Rechteck', sh_ellipse: 'Kreis', sh_triangle: 'Dreieck', sh_star: 'Stern', fill: 'Gefüllt', fillShape: 'Formen füllen', undo: 'Rückgängig',
+  plan_check: 'Checkliste', plan_list: 'Liste', chooseIcon: 'Icon wählen', changeIcon: 'Icon ändern', activity: 'Aktivität', addActivity: 'Aktivität', noIcon: 'Ohne Icon', iconCredit: 'Icons: Streamline (streamlinehq.com)',
+  w_sticker: 'Sticker', stickerLabel: 'Beschriftung (optional)',
+  events: 'Ereignisse', showCountdown: 'Countdown auf dem Bildschirm', noEvents: 'Keine Ereignisse geplant.', eventsNote: 'Ereignisse sind nicht verschlüsselt: Der Countdown zeigt sie ohne Passwort an.', delEventQ: 'Ereignis «{e}» löschen?',
   appTitle: 'Didac Klassenbildschirm', claim: 'Dein Jahr. Dein Vorsprung.',
   emptyTitle: 'Dein Bildschirm ist bereit!', emptyText: 'Wähle unten ein Werkzeug. Verschiebe es an der Titelleiste und vergrössere es an der Ecke unten rechts.',
   classes: 'Klassen', profSpace: 'Lehrpersonen-Bereich', fullscreen: 'Vollbild', exitFull: 'Vollbild beenden',

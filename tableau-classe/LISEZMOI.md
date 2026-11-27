@@ -1,4 +1,4 @@
-# Tableau de classe Didac (v1, 27.11.2026)
+# Tableau de classe Didac (v1.1, 27.11.2026)
 
 Site statique (HTML/CSS/JS, aucune installation), FR/DE, aux couleurs de la charte Didac.
 En ligne : https://tonytonyfle.github.io/websites/tableau-classe/
@@ -24,4 +24,11 @@ En ligne : https://tonytonyfle.github.io/websites/tableau-classe/
 
 ## Pistes v2
 Synchronisation entre ordinateurs (nécessite un backend hébergé en Suisse/UE et l'accord de Didac),
-widget symboles de travail, horaire des pauses, minuteurs multiples sur une même page.
+widget symboles de travail, horaire des pauses.
+
+## v1.1 (retours de Tony, 27.11.2026)
+Minuteur « Allégé » (cercle + temps, clic = démarrer/pause), noms déplaçables entre groupes,
+dés D4/D6/D8/D10/D12/D20 + pièce, évènements planifiés dans Espace prof › Agenda (non chiffrés)
+et repris par le compte à rebours, planning avec icônes Didac en mode checklist ou liste,
+widget Sticker (icônes Didac), formes dans le dessin (ligne, flèche, rectangle, cercle, triangle, étoile, remplissage, annuler),
+bouton « ← Retour au tableau » dans le bandeau quand l'espace prof est ouvert.

@@ -74,6 +74,7 @@ window.addEventListener('didac-vault-replaced', () => { key = null; D = null; re
 let root = null;
 function render() {
   btn.setAttribute('aria-pressed', open); document.body.classList.toggle('prof-open', open);
+  const lbl = btn.querySelector('.lbl'); if (lbl) lbl.textContent = open ? '← ' + T('backToBoard') : T('profSpace');
   if (!open) { if (root) { root.remove(); root = null; } return; }
   if (!root) { root = document.createElement('section'); root.className = 'prof'; root.setAttribute('aria-label', T('profSpace')); $('#board').appendChild(root); bind(); }
   const S = A.state;
@@ -148,6 +149,7 @@ function agenda() {
       : `<p class="lbl-s">${T('noLesson')}</p>`}
     </div>
     <div style="display:grid;gap:16px">
+      ${eventsCard()}
       <form class="card" data-role="lessonform">
         <h3>${ed ? T('editLesson') : T('newLesson')}</h3>
         <div class="row"><label class="field" style="flex:1"><span>${T('date')}</span><input class="inp" type="date" name="date" value="${esc(ed ? ed.date : todayISO())}" required></label>
@@ -164,6 +166,20 @@ function agenda() {
       </div>
     </div>
   </div>`;
+}
+
+/* ----- Évènements (non chiffrés : visibles par le compte à rebours du tableau) ----- */
+function eventsCard() {
+  const S = A.state; S.events = S.events || [];
+  const now = new Date().toISOString().slice(0, 16);
+  const evs = S.events.slice().sort((a, c) => a.date.localeCompare(c.date));
+  return `<form class="card" data-role="eventform"><h3>${T('events')}</h3>
+    <div class="row"><label class="field" style="flex:1;min-width:150px"><span>${T('eventName')}</span><input class="inp" name="title" required placeholder="${T('eventPh')}"></label>
+      <label class="field"><span>${T('eventDate')}</span><input class="inp" type="datetime-local" name="date" required></label>
+      <button class="btn" style="align-self:end">${T('add')}</button></div>
+    ${evs.length ? evs.map(e => `<div class="lesson" style="border-left-color:${e.date < now ? 'var(--d-gris2)' : 'var(--d-blau)'}"><div class="lesson-top"><b>${esc(e.title)}</b><span class="tag">${new Date(e.date).toLocaleString(locale(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+      <div class="row"><button type="button" class="btn btn--s" data-evshow="${e.id}">${T('showCountdown')}</button><button type="button" class="btn btn--ghost btn--s" data-evdel="${e.id}">${T('delete')}</button></div></div>`).join('') : `<p class="lbl-s" style="margin:0">${T('noEvents')}</p>`}
+    <p class="lbl-s" style="margin:0">${T('eventsNote')}</p></form>`;
 }
 
 /* ----- Absences ----- */
@@ -308,6 +324,11 @@ function bind() {
       else D.lessons.push({ id: uid(), ...o, classId: o.classId || ui.cls });
       ui.week = mondayOf(o.date); saveSoon(); render();
     }
+    if (role === 'eventform') {
+      const S = A.state; S.events = S.events || [];
+      S.events.push({ id: uid(), title: f.title.value.trim(), date: f.date.value }); A.save();
+      window.dispatchEvent(new Event('didac-events')); render(); return;
+    }
     if (role === 'evalform') {
       const o = Object.fromEntries(new FormData(f));
       const G = D.grades[ui.cls];
@@ -368,6 +389,10 @@ function bind() {
       }
       saveSoon(); render(); return;
     }
+    const evs = t.closest('[data-evshow]');
+    if (evs) { open = false; render(); A.addWidget('countdown', { eventId: evs.dataset.evshow, daysOnly: true }); return; }
+    const evd = t.closest('[data-evdel]');
+    if (evd) { const S = A.state; const e = S.events.find(x => x.id === evd.dataset.evdel); if (await A.confirmBox(T('delEventQ').replace('{e}', esc(e.title)), T('delete'))) { S.events = S.events.filter(x => x !== e); A.save(); window.dispatchEvent(new Event('didac-events')); render(); } return; }
     const el = t.closest('[data-editl]'); if (el) { ui.editLesson = el.dataset.editl; render(); root.querySelector('.prof-main').scrollTop = 0; return; }
     const cl = t.closest('[data-checkl]'); if (cl) { const l = D.lessons.find(x => x.id === cl.dataset.checkl); ui.clDate = l.date; ui.cls = l.classId; tab = 'checklist'; render(); return; }
     const dev = t.closest('[data-delev]');
