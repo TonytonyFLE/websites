@@ -49,6 +49,7 @@ function applyStatic() {
   $('#btnProf').innerHTML = `<span class="ico-on-rot">${ICON('graduation-cap', 'blanc')}</span><span class="ico-on-white">${ICON('graduation-cap')}</span><span class="lbl">${T('profSpace')}</span>`;
   $('#btnFull').innerHTML = `<span class="lbl">${document.fullscreenElement ? T('exitFull') : T('fullscreen')}</span>`;
   $('#btnFull').title = T('fullscreen');
+  if ($('#dockShow')) applyDock();
 }
 
 /* ---------- Classes (partagées avec l'espace prof) ---------- */
@@ -1170,7 +1171,7 @@ function removeWidget(id) {
 const BGS = [['blanc', '#FFFFFF'], ['gris1', '#DADADA'], ['rot', '#88004A'], ['gelb', '#F5C300'], ['orange', '#F07D00'], ['blau', '#29B8D8'], ['gruen', '#8CC63F'], ['pink', '#E8507A']];
 function renderDock() {
   const p = page();
-  $('#dock').innerHTML = ORDER.map(k => {
+  $('#dock').innerHTML = `<button class="tool tool--hide" data-act="hideDock" title="${T('hideDock')}">${DOCK_SVG(false)}<span>${T('hideDockShort')}</span></button><span class="dock-sep"></span>` + ORDER.map(k => {
     const d = WIDGETS[k];
     const vis = d.icon ? ICON(d.icon) : `<span class="glyph" aria-hidden="true">${d.glyph}</span>`;
     return `<button class="tool" data-add="${k}">${vis}<span>${T('w_' + k)}</span></button>`;
@@ -1178,8 +1179,17 @@ function renderDock() {
     <div class="bgpick" role="group" aria-label="${T('background')}"><span class="lbl-s">${T('background')}</span>${BGS.map(([k, c]) => `<button class="sw" style="background:${c}" data-bg="${k}" aria-pressed="${p.bg === k}" aria-label="${T('bg_' + k)}" title="${T('bg_' + k)}"></button>`).join('')}
     <label class="btn btn--s btn--ghost" title="${T('bgImageHint')}" ${p.bg === 'image' ? 'style="background:var(--d-gris1)"' : ''}>${T('bg_image')}<input type="file" accept="image/*" hidden data-role="bgimg"></label></div>`;
 }
+/* Barre d'outils masquable : plus de place pour le tableau ; un petit bouton la fait revenir */
+const DOCK_SVG = up => `<svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="${up ? 'M4 13l6-6 6 6' : 'M4 7l6 6 6-6'}"/></svg>`;
+function applyDock() {
+  document.body.classList.toggle('dock-hidden', !!S.dockHidden);
+  let b = $('#dockShow');
+  if (!b) { b = document.createElement('button'); b.id = 'dockShow'; b.className = 'dock-show'; b.onclick = () => { S.dockHidden = false; save(); applyDock(); }; document.body.appendChild(b); }
+  b.innerHTML = `${DOCK_SVG(true)}<span>${T('showDock')}</span>`; b.title = T('showDock'); b.hidden = !S.dockHidden;
+}
 $('#dock').addEventListener('click', e => {
   const a = e.target.closest('[data-add]'); if (a) { addWidget(a.dataset.add); return; }
+  if (e.target.closest('[data-act=hideDock]')) { S.dockHidden = true; save(); applyDock(); return; }
   const bg = e.target.closest('[data-bg]'); if (bg) { const p = page(); p.bg = bg.dataset.bg; delete p.bgImg; board.dataset.bg = p.bg; board.style.backgroundImage = ''; save(); renderDock(); }
 });
 $('#dock').addEventListener('change', async e => {
@@ -1428,7 +1438,7 @@ window.DidacApp = {
   goPage(id) { const i = S.pages.findIndex(p => p.id === id); if (i < 0) return; S.current = i; save(); renderTabs(); renderBoard(); }
 };
 
-applyStatic(); renderTabs(); renderBoard();
+applyStatic(); renderTabs(); renderBoard(); applyDock();
 setTimeout(checkBackup, 4000);
 $('#emptyTpl').addEventListener('click', openTemplates);
 })();

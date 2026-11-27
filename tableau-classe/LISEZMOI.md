@@ -77,3 +77,7 @@ Widget « Horaire auto » (facultatif) : enchaîne cours → pause → cours sel
   Accès : catalogue ▦ › « Partir d'un modèle », ou page vide.
 - Rappel de sauvegarde : après 14 jours sans sauvegarde (ou jamais), bandeau « Sauvegarder maintenant / Plus tard » (7 jours).
 - Poids : ~360 Ko (≈ 140 Ko compressés), 9 requêtes, ~0,5 s à 10 Mbit/s.
+
+## v1.7 (27.11.2026) : barre d'outils masquable
+Bouton « Masquer » à gauche de la barre du bas : le tableau prend toute la hauteur ; un bouton discret « Outils »
+en bas à droite la fait revenir. Le choix est mémorisé.
