@@ -296,41 +296,51 @@ const WIDGETS = {
 
   /* ----- Nom au hasard ----- */
   random: {
-    icon: 'user-single-neutral-male', w: 460, h: 320, init: () => ({ classId: null, noRepeat: true, drawn: [], last: null, view: 'draw' }),
+    icon: 'user-single-neutral-male', w: 460, h: 320, init: () => ({ classId: null, noRepeat: true, drawn: [], last: null, view: 'draw', list: '' }),
     mount(b, wd) {
-      const st = wd.state;
-      if (!classById(st.classId) && S.classes[0]) st.classId = S.classes[0].id;
+      const st = wd.state; if (st.list === undefined) st.list = '';
+      const isList = () => st.classId === '__list';
+      if (!isList() && !classById(st.classId)) st.classId = S.classes[0] ? S.classes[0].id : '__list';
       let spinning = null;
+      // éléments tirables : élèves présents de la classe, ou lignes de la liste libre
+      const items = () => isList() ? st.list.split('\n').map(x => x.trim()).filter(Boolean).map((name, i) => ({ id: 'L' + i + ':' + name, name }))
+        : presentStudents(classById(st.classId));
+      const srcSelect = () => `<select class="inp" data-role="cls" aria-label="${T('source')}">${S.classes.map(c => `<option value="${c.id}" ${c.id === st.classId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}<option value="__list" ${isList() ? 'selected' : ''}>${T('freeList')}</option></select>`;
       function render() {
-        const cls = classById(st.classId);
-        if (!cls) { b.innerHTML = `<div class="big"><div><p>${T('noClassHint')}</p><button class="btn" data-act="openClasses">${T('createClass')}</button></div></div>`; return; }
-        const pool = presentStudents(cls).filter(s => !st.noRepeat || !st.drawn.includes(s.id));
-        const lastS = cls.students.find(s => s.id === st.last);
-        b.innerHTML = `<div class="ctl">${classSelect(st.classId)}
-            <label class="chk"><input type="checkbox" data-role="norep" ${st.noRepeat ? 'checked' : ''}> ${T('noRepeat')}</label>
-            <button class="btn btn--s btn--ghost" data-act="view">${st.view === 'draw' ? T('presence') : T('back')}</button></div>
-          ${st.view === 'draw' ? `<div class="big"><div><div class="rn-name">${lastS ? esc(lastS.name) : '?'}</div>
-            <div class="rn-count">${st.noRepeat ? T('remaining').replace('{n}', pool.length) : T('presentCount').replace('{n}', presentStudents(cls).length)}</div></div></div>
-          <div class="ctl"><button class="btn" data-act="draw" ${pool.length || st.noRepeat ? '' : 'disabled'}>${pool.length || !st.noRepeat ? T('draw') : T('restart')}</button>
-            ${st.noRepeat ? `<button class="btn btn--ghost" data-act="restart">${T('restart')}</button>` : ''}</div>`
-          : `<div class="hint" style="padding-top:4px">${T('presenceHint')}</div><div class="panel-sub">${presenceChips(cls)}</div>`}`;
+        const all = items();
+        const pool = all.filter(s => !st.noRepeat || !st.drawn.includes(s.id));
+        const lastS = all.find(s => s.id === st.last) || (isList() ? null : (classById(st.classId) || { students: [] }).students.find(s => s.id === st.last));
+        const sideBtn = isList() ? `<button class="btn btn--s btn--ghost" data-act="view">${st.view === 'edit' ? T('back') : T('editList')}</button>`
+          : `<button class="btn btn--s btn--ghost" data-act="view">${st.view === 'draw' ? T('presence') : T('back')}</button>`;
+        const head = `<div class="ctl">${srcSelect()}<label class="chk"><input type="checkbox" data-role="norep" ${st.noRepeat ? 'checked' : ''}> ${T('noRepeat')}</label>${sideBtn}</div>`;
+        if (isList() && (st.view === 'edit' || !all.length)) {
+          b.innerHTML = `${head}<textarea class="inp rn-list" data-role="list" placeholder="${T('freeListPh')}" aria-label="${T('freeList')}">${esc(st.list)}</textarea>
+            <div class="ctl"><button class="btn" data-act="listOk">${T('ok')}</button><span class="lbl-s">${T('nItems').replace('{n}', all.length)}</span></div>`;
+          return;
+        }
+        if (!isList() && st.view === 'presence') { b.innerHTML = `${head}<div class="hint" style="padding-top:4px">${T('presenceHint')}</div><div class="panel-sub">${presenceChips(classById(st.classId))}</div>`; return; }
+        b.innerHTML = `${head}<div class="big"><div><div class="rn-name">${lastS ? esc(lastS.name) : '?'}</div>
+            <div class="rn-count">${st.noRepeat ? T(isList() ? 'remainingItems' : 'remaining').replace('{n}', pool.length) : T(isList() ? 'nItems' : 'presentCount').replace('{n}', all.length)}</div></div></div>
+          <div class="ctl"><button class="btn" data-act="draw" ${all.length ? '' : 'disabled'}>${pool.length || !st.noRepeat ? T('draw') : T('restart')}</button>
+            ${st.noRepeat ? `<button class="btn btn--ghost" data-act="restart">${T('restart')}</button>` : ''}</div>`;
       }
       b.addEventListener('change', e => {
-        if (e.target.dataset.role === 'cls') { st.classId = e.target.value; st.drawn = []; st.last = null; save(); render(); }
+        if (e.target.dataset.role === 'cls') { st.classId = e.target.value; st.drawn = []; st.last = null; st.view = 'draw'; save(); render(); }
         if (e.target.dataset.role === 'norep') { st.noRepeat = e.target.checked; st.drawn = []; save(); render(); }
       });
+      b.addEventListener('input', e => { if (e.target.dataset.role === 'list') { st.list = e.target.value; save(); const n = $('.ctl .lbl-s', b); if (n) n.textContent = T('nItems').replace('{n}', items().length); } });
       b.addEventListener('click', e => {
         const chip = e.target.closest('.chip'); if (chip) { toggleAbsent(st.classId, chip.dataset.sid); chip.setAttribute('aria-pressed', !isAbsent(st.classId, chip.dataset.sid)); return; }
         const a = e.target.closest('[data-act]'); if (!a || spinning) return;
-        const cls = classById(st.classId);
-        if (a.dataset.act === 'view') { st.view = st.view === 'draw' ? 'presence' : 'draw'; save(); render(); }
+        if (a.dataset.act === 'view') { st.view = st.view === 'draw' ? (isList() ? 'edit' : 'presence') : 'draw'; save(); render(); }
+        if (a.dataset.act === 'listOk') { st.view = 'draw'; st.drawn = []; st.last = null; save(); render(); }
         if (a.dataset.act === 'restart') { st.drawn = []; st.last = null; save(); render(); }
-        if (a.dataset.act === 'draw' && cls) {
-          let pool = presentStudents(cls).filter(s => !st.noRepeat || !st.drawn.includes(s.id));
+        if (a.dataset.act === 'draw') {
+          const all = items(); if (!all.length) return;
+          const pool = all.filter(s => !st.noRepeat || !st.drawn.includes(s.id));
           if (!pool.length) { st.drawn = []; save(); render(); return; }
           const pick = pool[Math.floor(Math.random() * pool.length)];
-          const nameEl = $('.rn-name', b); nameEl.classList.add('is-spin');
-          const all = presentStudents(cls); let n = 0;
+          const nameEl = $('.rn-name', b); nameEl.classList.add('is-spin'); let n = 0;
           spinning = setInterval(() => {
             nameEl.textContent = all[Math.floor(Math.random() * all.length)].name;
             if (++n > 14) { clearInterval(spinning); spinning = null; st.last = pick.id; if (st.noRepeat) st.drawn.push(pick.id); save(); render(); }
@@ -339,6 +349,77 @@ const WIDGETS = {
       });
       render();
       return () => { if (spinning) clearInterval(spinning); };
+    }
+  },
+  /* ----- Flashcards : une ligne = une carte (« recto ; verso »), recto seul ou recto-verso ----- */
+  flash: {
+    icon: 'cards', w: 520, h: 360, init: () => ({ text: '', mode: 'rv', reverse: false, shuffle: true, view: 'edit', order: [], pos: 0, known: [], flipped: false }),
+    mount(b, wd) {
+      const st = wd.state;
+      const cards = () => st.text.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+        const m = l.split(/\s*(?:;|\t|\s=\s|\s[–—-]\s)\s*/); return { f: m[0], b: m.slice(1).join(' ; ') };
+      });
+      function deal() {
+        const n = cards().length; st.order = [...Array(n).keys()];
+        if (st.shuffle) for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [st.order[i], st.order[j]] = [st.order[j], st.order[i]]; }
+        st.pos = 0; st.known = []; st.flipped = false;
+      }
+      const left = () => st.order.filter(i => !st.known.includes(i));
+      function render() {
+        const C = cards();
+        if (st.view === 'edit' || !C.length) {
+          b.innerHTML = `<textarea class="inp rn-list" data-role="text" placeholder="${T('flashPh')}" aria-label="${T('flashCards')}">${esc(st.text)}</textarea>
+            <div class="ctl"><div class="seg-s" role="group" aria-label="${T('flashMode')}">
+              <button data-mode="recto" aria-pressed="${st.mode === 'recto'}">${T('flashRecto')}</button><button data-mode="rv" aria-pressed="${st.mode === 'rv'}">${T('flashRV')}</button></div>
+              <label class="chk"><input type="checkbox" data-role="shuffle" ${st.shuffle ? 'checked' : ''}> ${T('shuffle')}</label>
+              ${st.mode === 'rv' ? `<label class="chk"><input type="checkbox" data-role="reverse" ${st.reverse ? 'checked' : ''}> ${T('flashReverse')}</label>` : ''}
+              <span style="flex:1"></span><button class="btn" data-act="start" ${C.length ? '' : 'disabled'}>${T('flashStart')} (${C.length})</button></div>`;
+          return;
+        }
+        if (st.order.length !== C.length) deal();
+        const L = left();
+        if (!L.length) {
+          b.innerHTML = `<div class="big"><div><div class="fc-done">${ICON('trophy')}<b>${T('flashAllKnown')}</b></div></div></div>
+            <div class="ctl"><button class="btn" data-act="again">${T('restart')}</button><button class="btn btn--ghost" data-act="edit">${T('editList')}</button></div>`;
+          return;
+        }
+        st.pos = Math.min(st.pos, L.length - 1);
+        const c = C[L[st.pos]], front = st.mode === 'rv' && st.reverse ? c.b || c.f : c.f, back = st.mode === 'rv' && st.reverse ? c.f : c.b;
+        const rv = st.mode === 'rv' && back;
+        b.innerHTML = `<div class="fc-wrap"><button class="fc ${st.flipped && rv ? 'is-flipped' : ''}" data-act="flip" aria-label="${rv ? T('flashFlip') : ''}" ${rv ? '' : 'tabindex="-1"'}>
+            <span class="fc-face fc-front"><span>${esc(front)}</span></span>${rv ? `<span class="fc-face fc-back"><span>${esc(back)}</span></span>` : ''}</button></div>
+          <div class="ctl"><button class="btn btn--ghost btn--s" data-act="prev" aria-label="${T('prev')}" ${st.pos ? '' : 'disabled'}>←</button>
+            <span class="lbl-s fc-count">${st.pos + 1} / ${L.length}${st.known.length ? ` · ✓ ${st.known.length}` : ''}</span>
+            <button class="btn btn--ghost btn--s" data-act="next" aria-label="${T('next')}" ${st.pos < L.length - 1 ? '' : 'disabled'}>→</button>
+            ${rv ? `<button class="btn btn--s" data-act="flip">${T('flashFlip')}</button>` : ''}
+            <button class="btn btn--ghost btn--s" data-act="known" title="${T('flashKnownHint')}">✓ ${T('flashKnown')}</button>
+            <span style="flex:1"></span>
+            <button class="btn btn--ghost btn--s full-only" data-act="again">${T('shuffle')}</button><button class="btn btn--ghost btn--s full-only" data-act="edit">${T('editList')}</button></div>`;
+      }
+      b.addEventListener('input', e => { if (e.target.dataset.role === 'text') { st.text = e.target.value; save(); const s = $('[data-act=start]', b); if (s) { const n = cards().length; s.disabled = !n; s.textContent = `${T('flashStart')} (${n})`; } } });
+      b.addEventListener('change', e => {
+        const r = e.target.dataset.role;
+        if (r === 'shuffle') { st.shuffle = e.target.checked; save(); }
+        if (r === 'reverse') { st.reverse = e.target.checked; save(); }
+      });
+      b.addEventListener('click', e => {
+        const md = e.target.closest('[data-mode]'); if (md) { st.mode = md.dataset.mode; save(); render(); return; }
+        const a = e.target.closest('[data-act]'); if (!a) return;
+        const act = a.dataset.act, L = left();
+        if (act === 'start' || act === 'again') { deal(); st.view = 'play'; }
+        if (act === 'edit') st.view = 'edit';
+        if (act === 'flip') { if (st.mode !== 'rv') return; st.flipped = !st.flipped; const f = $('.fc', b); if (f) { f.classList.toggle('is-flipped', st.flipped); save(); return; } }
+        if (act === 'next' && st.pos < L.length - 1) { st.pos++; st.flipped = false; }
+        if (act === 'prev' && st.pos > 0) { st.pos--; st.flipped = false; }
+        if (act === 'known') { st.known.push(L[st.pos]); st.flipped = false; }
+        save(); render();
+      });
+      b.addEventListener('keydown', e => {
+        if (st.view === 'edit' || e.target.tagName === 'TEXTAREA') return;
+        const k = { ArrowRight: 'next', ArrowLeft: 'prev', ' ': 'flip', Enter: 'flip' }[e.key]; if (!k) return;
+        e.preventDefault(); const btn = $(`[data-act=${k}]`, b); if (btn && !btn.disabled) btn.click(); const f = $('.fc', b); if (f) f.focus();
+      });
+      render();
     }
   },
 
@@ -738,7 +819,7 @@ const WIDGETS = {
     }
   }
 };
-const ORDER = ['clock', 'timer', 'schedule', 'stopwatch', 'random', 'groups', 'dice', 'countdown', 'plan', 'text', 'sticker', 'image', 'calc', 'draw'];
+const ORDER = ['clock', 'timer', 'schedule', 'stopwatch', 'random', 'flash', 'groups', 'dice', 'countdown', 'plan', 'text', 'sticker', 'image', 'calc', 'draw'];
 
 /* ---------- Choix d'une icône Didac (planning, stickers) ---------- */
 function iconPicker(current, onPick) {
@@ -812,21 +893,86 @@ const mounted = new Map(); // id → { el, cleanup }
 const page = () => S.pages[S.current] || S.pages[0];
 const pageName = (p, i) => p.name || `${T('page')} ${i + 1}`;
 
+/* ---------- Onglets + catalogue des pages ----------
+   Barre : pages épinglées + 3 dernières ouvertes + page active. Toutes les pages : catalogue avec recherche. */
+const MAX_AUTO_PIN = 8;
+const isPinned = p => p.pinned !== false;
+function newPage(name) {
+  const p = { id: uid(), name: name || '', bg: 'blanc', widgets: [], created: Date.now() };
+  p.pinned = S.pages.filter(isPinned).length < MAX_AUTO_PIN;
+  S.pages.push(p); return p;
+}
+function tabVisible(p, i) { return isPinned(p) || i === S.current || (S.recent || []).includes(p.id); }
+const CAT_SVG = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="currentColor"><rect x="1" y="1" width="7.5" height="7.5" rx="1.5"/><rect x="11.5" y="1" width="7.5" height="7.5" rx="1.5"/><rect x="1" y="11.5" width="7.5" height="7.5" rx="1.5"/><rect x="11.5" y="11.5" width="7.5" height="7.5" rx="1.5"/></svg>';
 function renderTabs() {
   const tabs = $('#tabs');
-  tabs.innerHTML = S.pages.map((p, i) => `<button class="tab" role="tab" aria-selected="${i === S.current}" data-i="${i}" title="${T('tabHint')}">${esc(pageName(p, i))}</button>`).join('')
+  tabs.innerHTML = `<button class="tab tab--cat" data-act="catalog" title="${T('allPages')}" aria-label="${T('allPages')}">${CAT_SVG}<span>${S.pages.length}</span></button>`
+    + S.pages.map((p, i) => tabVisible(p, i) ? `<button class="tab ${isPinned(p) ? '' : 'tab--tmp'}" role="tab" aria-selected="${i === S.current}" data-i="${i}" title="${T('tabHint')}">${esc(pageName(p, i))}</button>` : '').join('')
     + `<button class="tab tab--add" data-act="addPage" title="${T('addPage')}" aria-label="${T('addPage')}">+</button>`;
+  const cur = tabs.querySelector('[aria-selected=true]'); if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 $('#tabs').addEventListener('click', e => {
   const t = e.target.closest('[data-i]');
   if (t) { const i = +t.dataset.i; if (i === S.current) pageMenu(i); else { S.current = i; save(); renderBoard(); renderTabs(); } return; }
-  if (e.target.closest('[data-act=addPage]')) { S.pages.push({ id: uid(), name: '', bg: 'blanc', widgets: [] }); S.current = S.pages.length - 1; save(); renderBoard(); renderTabs(); }
+  if (e.target.closest('[data-act=catalog]')) { openCatalog(); return; }
+  if (e.target.closest('[data-act=addPage]')) { newPage(); S.current = S.pages.length - 1; save(); renderBoard(); renderTabs(); }
 });
+const fold = x => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+function pageText(p) {
+  const out = [p.name];
+  p.widgets.forEach(w => { const st = w.state || {}; out.push(st.title, st.text, st.label, st.html && st.html.replace(/<[^>]+>/g, ' '));
+    (st.items || []).forEach(it => out.push(it.t)); });
+  return fold(out.filter(Boolean).join(' '));
+}
+function openCatalog() {
+  let q = '', sort = S.catSort || 'recent';
+  const fmtD = ts => ts ? new Date(ts).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  function list() {
+    const words = fold(q).split(/\s+/).filter(Boolean);
+    let L = S.pages.map((p, i) => ({ p, i })).filter(({ p }) => { if (!words.length) return true; const t = pageText(p); return words.every(w => t.includes(w)); });
+    if (sort === 'recent') L.sort((a, b) => (b.p.opened || 0) - (a.p.opened || 0));
+    if (sort === 'name') L.sort((a, b) => pageName(a.p, a.i).localeCompare(pageName(b.p, b.i), locale(), { numeric: true }));
+    if (sort === 'nameDesc') L.sort((a, b) => pageName(b.p, b.i).localeCompare(pageName(a.p, a.i), locale(), { numeric: true }));
+    return L.length ? L.map(({ p, i }) => `<div class="cat-row ${i === S.current ? 'is-cur' : ''}">
+      <button class="cat-pin" data-pin="${i}" aria-pressed="${isPinned(p)}" title="${T('pinTab')}" aria-label="${T('pinTab')} : ${esc(pageName(p, i))}">${isPinned(p) ? '★' : '☆'}</button>
+      <button class="cat-open" data-open="${i}"><b>${esc(pageName(p, i))}</b><span class="lbl-s">${T('nTools').replace('{n}', p.widgets.length)} · ${T('openedOn')} ${fmtD(p.opened)}</span>
+        <span class="cat-ic">${[...new Set(p.widgets.map(w => w.type))].slice(0, 8).map(ty => WIDGETS[ty] ? ICON(WIDGETS[ty].icon) : '').join('')}</span></button>
+      <button class="btn btn--ghost btn--s" data-dup="${i}">${T('duplicate')}</button>
+      <button class="w-x" data-del="${i}" ${S.pages.length < 2 ? 'disabled' : ''} title="${T('deletePage')}" aria-label="${T('deletePage')} ${esc(pageName(p, i))}">×</button></div>`).join('')
+      : `<p class="lbl-s">${T('noPageFound')}</p>`;
+  }
+  const go = i => { S.current = i; closeDlg(); save(); renderBoard(); renderTabs(); };
+  openDlg(`<h2>${T('allPages')} (${S.pages.length})</h2>
+    <div class="row"><input class="inp" type="search" id="catQ" placeholder="${T('pageSearchPh')}" aria-label="${T('search')}" style="flex:1;min-width:180px">
+      <select class="inp" id="catSort" aria-label="${T('sortBy')}">${['recent', 'name', 'nameDesc', 'order'].map(k => `<option value="${k}" ${k === sort ? 'selected' : ''}>${T('sort_' + k)}</option>`).join('')}</select>
+      <button class="btn" data-act="catNew">+ ${T('addPage')}</button></div>
+    <p class="lbl-s" style="margin:0">${T('catHint')}</p>
+    <div class="cat-list" id="catList">${list()}</div>
+    <div class="row row--end"><button class="btn btn--ghost" data-act="closeDlg">${T('close')}</button></div>`, body => {
+    const inp = $('#catQ', body), box = $('#catList', body); inp.value = q; inp.focus();
+    const refresh = () => { box.innerHTML = list(); };
+    inp.oninput = () => { q = inp.value; refresh(); };
+    inp.onkeydown = e => { if (e.key === 'Enter') { const f = $('[data-open]', box); if (f) go(+f.dataset.open); } };
+    $('#catSort', body).onchange = e => { sort = S.catSort = e.target.value; save(); refresh(); };
+    body.onclick = async e => {
+      const t = e.target;
+      const o = t.closest('[data-open]'); if (o) return go(+o.dataset.open);
+      const pn = t.closest('[data-pin]'); if (pn) { const p = S.pages[+pn.dataset.pin]; p.pinned = !isPinned(p); save(); renderTabs(); refresh(); return; }
+      const d = t.closest('[data-dup]'); if (d) { const i = +d.dataset.dup, p = S.pages[i]; const c = JSON.parse(JSON.stringify(p)); c.id = uid(); c.name = (p.name || pageName(p, i)) + ' (2)'; c.opened = Date.now(); c.widgets.forEach(w => w.id = uid()); S.pages.splice(i + 1, 0, c); if (S.current > i) S.current++; save(); renderTabs(); refresh(); return; }
+      const x = t.closest('[data-del]'); if (x) { const i = +x.dataset.del, p = S.pages[i];
+        if (await confirmBox(T('deletePageQ').replace('{p}', esc(pageName(p, i))), T('deletePage'))) { S.pages.splice(i, 1); if (S.current >= i) S.current = Math.max(0, S.current - 1); save(); renderBoard(); renderTabs(); }
+        openCatalog(); return; }
+      if (t.closest('[data-act=catNew]')) { const p = newPage(inp.value.trim()); go(S.pages.indexOf(p)); }
+    };
+  }, true);
+}
 
 function unmountAll() { mounted.forEach(m => { try { m.cleanup && m.cleanup(); } catch (e) { } m.el.remove(); }); mounted.clear(); }
 function renderBoard() {
   unmountAll();
   const p = page();
+  p.opened = Date.now();
+  S.recent = [p.id, ...(S.recent || []).filter(id => id !== p.id && S.pages.some(x => x.id === id))].slice(0, 4);
   board.dataset.bg = p.bg || 'blanc';
   board.style.backgroundImage = p.bg === 'image' && p.bgImg ? `url("${p.bgImg}")` : '';
   p.widgets.forEach(wd => mountWidget(wd));
@@ -920,8 +1066,8 @@ $('#dock').addEventListener('change', async e => {
 
 /* ---------- Boîte de dialogue générique ---------- */
 const dlg = $('#dlg');
-function openDlg(html, onReady) {
-  $('#dlgBody').innerHTML = html; if (!dlg.open) dlg.showModal(); onReady && onReady($('#dlgBody'));
+function openDlg(html, onReady, wide) {
+  dlg.classList.toggle('dlg--wide', !!wide); $('#dlgBody').innerHTML = html; if (!dlg.open) dlg.showModal(); onReady && onReady($('#dlgBody'));
 }
 function closeDlg() { if (dlg.open) dlg.close(); }
 dlg.addEventListener('click', e => { if (e.target === dlg) closeDlg(); if (e.target.closest('[data-act=closeDlg]')) closeDlg(); });
@@ -941,6 +1087,7 @@ function pageMenu(i) {
     <div class="row">
       <button class="btn btn--ghost btn--s" data-m="left" ${i === 0 ? 'disabled' : ''}>← ${T('moveLeft')}</button>
       <button class="btn btn--ghost btn--s" data-m="right" ${i === S.pages.length - 1 ? 'disabled' : ''}>${T('moveRight')} →</button>
+      <button class="btn btn--ghost btn--s" data-m="pin">${isPinned(p) ? '★ ' + T('unpinTab') : '☆ ' + T('pinTab')}</button>
       <button class="btn btn--ghost btn--s" data-m="dup">${T('duplicate')}</button>
       <button class="btn btn--ghost btn--s" data-m="clear">${T('clearPage')}</button>
       <button class="btn btn--black btn--s" data-m="del" ${S.pages.length < 2 ? 'disabled' : ''}>${T('deletePage')}</button>
@@ -953,6 +1100,7 @@ function pageMenu(i) {
       p.name = inp.value.trim();
       const m = b.dataset.m;
       if (m === 'left' || m === 'right') { const j = m === 'left' ? i - 1 : i + 1;[S.pages[i], S.pages[j]] = [S.pages[j], S.pages[i]]; S.current = j; }
+      if (m === 'pin') p.pinned = !isPinned(p);
       if (m === 'dup') { const c = JSON.parse(JSON.stringify(p)); c.id = uid(); c.name = (p.name || pageName(p, i)) + ' (2)'; c.widgets.forEach(w => w.id = uid()); S.pages.splice(i + 1, 0, c); S.current = i + 1; }
       if (m === 'clear') { closeDlg(); if (await confirmBox(T('clearPageQ'))) { p.widgets = []; } }
       if (m === 'del') { closeDlg(); if (await confirmBox(T('deletePageQ').replace('{p}', esc(pageName(p, i))), T('deletePage'))) { S.pages.splice(i, 1); S.current = Math.max(0, Math.min(S.current, S.pages.length - 1)); } }
@@ -1047,7 +1195,7 @@ let rzT; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setT
 window.DidacApp = {
   T, esc, uid, h, $, LS, ICON, pad, todayISO, locale, download, exportPDF, openDlg, closeDlg, confirmBox, openClasses,
   get state() { return S; }, classById, save, addWidget, iconPicker,
-  addPage(name) { const p = { id: uid(), name: name || '', bg: 'blanc', widgets: [] }; S.pages.push(p); save(); renderTabs(); return p.id; },
+  addPage(name) { const p = newPage(name); p.pinned = true; save(); renderTabs(); return p.id; },
   goPage(id) { const i = S.pages.findIndex(p => p.id === id); if (i < 0) return; S.current = i; save(); renderTabs(); renderBoard(); }
 };
 

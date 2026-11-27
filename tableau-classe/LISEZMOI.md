@@ -57,3 +57,11 @@ Widget « Horaire auto » (facultatif) : enchaîne cours → pause → cours sel
   modèles Word couleur FR et DE. Source du Merkblatt : tableau-classe-docs/make.py.
 - Police Atkinson Hyperlegible Next hébergée sur le site (fonts/, licence OFL) : aucun appel à un service tiers.
 - Poids au chargement : ~300 Ko (≈ 120 Ko compressés), 9 requêtes, ~0,5 s sur une connexion 10 Mbit/s.
+
+## v1.5 (27.11.2026) : catalogue des pages, liste libre, flashcards
+- Bouton ▦ (nombre de pages) à gauche des onglets : catalogue de toutes les pages, recherche par nom, date ou contenu
+  (textes, plannings), tri (récentes, nom, ordre), ★ = épinglée dans la barre, dupliquer, supprimer.
+  La barre affiche les pages épinglées + les 3 dernières ouvertes + la page active. Les 8 premières pages sont épinglées d'office.
+- Tirage au sort : source « Liste libre » (un élément par ligne), sans répétition possible.
+- Widget Flashcards : une carte par ligne « recto ; verso » (aussi tabulation, « = » ou « - »), mode recto seul ou recto-verso,
+  mélanger, commencer par le verso, « Je sais » retire la carte de la série, flèches et espace au clavier.
