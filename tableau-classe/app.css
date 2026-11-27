@@ -549,3 +549,15 @@ body.dock-hidden .dock { display: none; }
 .tool--hide .glyph, .tool--hide svg { width: 30px; height: 30px; }
 body.prof-open .dock-show { display: none; }
 .tool > span:last-child { hyphens: auto; -webkit-hyphens: auto; overflow-wrap: anywhere; max-width: 100%; }
+
+/* v1.7.2 : jamais d'icône (gris + Didac Rot) sur fond gris → surfaces blanches + contour */
+.tool:hover { background: var(--d-blanc); box-shadow: inset 0 0 0 2px var(--d-gris1); }
+.ic-btn[aria-pressed="true"] { background: var(--d-blanc); border-color: var(--d-rot); box-shadow: inset 0 0 0 1px var(--d-rot); }
+.cat-open:hover, .cat-open:focus-visible { background: var(--d-blanc); box-shadow: inset 0 0 0 2px var(--d-gris1); }
+.wk-tile { background: var(--d-blanc); border: 3px solid var(--d-rot); grid-template-rows: minmax(0, 1fr) auto; }
+.wk-tile svg { width: auto; height: min(46cqh, 22cqw); max-height: none; display: block; }
+.w.is-compact .wk-tile svg { height: min(60cqh, 24cqw); }
+.wk-opt[aria-pressed=true] { background: var(--d-blanc); border-color: var(--d-rot); box-shadow: inset 0 0 0 1px var(--d-rot); }
+.wk-tile { display: flex; flex-direction: column; align-items: stretch; justify-content: center; overflow: hidden; }
+.wk-tile svg, .w.is-compact .wk-tile svg { flex: 1 1 0; min-height: 0; width: 100%; height: auto; max-height: none; }
+.wk-tile span { flex: none; }
