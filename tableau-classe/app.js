@@ -219,11 +219,13 @@ const WIDGETS = {
       function segments(now) {
         const sched = S.schedule || { slots: DIDAC_SLOTS, cells: {} };
         const day = now.getDay(); if (day < 1 || day > 5) return [];
-        const hasMine = Object.keys(sched.cells || {}).some(k => k.startsWith(day + '-'));
-        const mode = st.mode === 'mine' && Object.keys(sched.cells || {}).length ? 'mine' : 'all';
+        const iso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`, once = sched.once || {};
+        const cellOf = i => once[iso + '|' + i] || (sched.cells || {})[day + '-' + i];
+        const hasMine = sched.slots.some((sl, i) => !sl.brk && cellOf(i));
+        const mode = st.mode === 'mine' && (Object.keys(sched.cells || {}).length || Object.keys(once).length) ? 'mine' : 'all';
         if (mode === 'mine' && !hasMine) return [];
-        const L = sched.slots.map((sl, i) => ({ sl, i })).filter(({ sl, i }) => !sl.brk && (mode === 'all' || sched.cells[day + '-' + i]))
-          .map(({ sl, i }) => { const c = (sched.cells || {})[day + '-' + i]; return { type: 'lesson', s: toMin(sl.s), e: toMin(sl.e), label: c ? [c.subject, c.cls].filter(Boolean).join(' · ') || T('lesson') : T('lesson'), room: c && c.room, color: c && c.color }; });
+        const L = sched.slots.map((sl, i) => ({ sl, i })).filter(({ sl, i }) => !sl.brk && (mode === 'all' || cellOf(i)))
+          .map(({ sl, i }) => { const c = cellOf(i); return { type: 'lesson', s: toMin(sl.s), e: toMin(sl.e), label: c ? [c.subject, c.cls].filter(Boolean).join(' · ') || T('lesson') : T('lesson'), room: c && c.room, color: c && c.color }; });
         const out = [];
         L.forEach((seg, k) => {
           out.push(seg); const nx = L[k + 1];

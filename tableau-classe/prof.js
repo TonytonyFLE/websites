@@ -34,7 +34,10 @@ function mirrorSchedule() {
   if (!D || !D.timetable) return;
   const cells = {};
   Object.entries(D.timetable.cells).forEach(([k, c]) => { cells[k] = { subject: c.subject || '', cls: (A.classById(c.classId) || {}).name || '', room: c.room || '', color: c.color || '' }; });
-  const next = { slots: D.timetable.slots, cells }, S = A.state;
+  // cours uniques (date précise) : seulement ceux d'aujourd'hui aux 60 prochains jours
+  const once = {}, from = todayISO(), to = addDays(todayISO(), 60);
+  Object.entries(D.timetable.once || {}).forEach(([k, c]) => { const dt = k.split('|')[0]; if (dt >= from && dt <= to) once[k] = { subject: c.subject || '', cls: (A.classById(c.classId) || {}).name || '', room: c.room || '', color: c.color || '' }; });
+  const next = { slots: D.timetable.slots, cells, once }, S = A.state;
   if (JSON.stringify(S.schedule) === JSON.stringify(next)) return;
   S.schedule = next; A.save(); window.dispatchEvent(new Event('didac-schedule'));
 }
@@ -79,6 +82,7 @@ function normalize(d) {
   d.docs = d.docs || [];
   d.todos = d.todos || [];
   d.timetable = d.timetable || { slots: DIDAC_SLOTS.map(x => ({ ...x })), cells: {} };
+  d.timetable.once = d.timetable.once || {};
   return d;
 }
 function defaultTemplate() {
@@ -515,6 +519,8 @@ const DIDAC_SLOTS = [['08:40', '09:20'], ['09:25', '10:05'], ['10:20', '11:00'],
   .map(([s, e, brk]) => ({ s, e, brk: !!brk }));
 const TT_COLORS = ['gris1', 'gelb', 'blau', 'gruen', 'orange', 'pink'];
 const DAYS = [1, 2, 3, 4, 5];
+// case affichée pour un jour précis : un cours unique ce jour-là remplace le cours hebdomadaire
+function cellAt(d, i, date) { const o = (D.timetable.once || {})[date + '|' + i]; return o ? { ...o, once: true } : D.timetable.cells[d + '-' + i]; }
 function ttCellLesson(d, i, c) {
   const date = addDays(ui.ttWeek, d - 1), sl = D.timetable.slots[i];
   return D.lessons.find(l => l.date === date && l.time === sl.s && (!c.classId || l.classId === c.classId));
@@ -538,16 +544,16 @@ function timetable() {
   ${TTb.slots.map((sl, i) => sl.brk
     ? `<tr class="tt-brk"><th>${sl.s}–${sl.e}</th><td colspan="5">${T('lunch')}</td></tr>`
     : `<tr><th class="${ui.ttWeek === mondayOf(today) && hm >= sl.s && hm < sl.e ? 'is-now' : ''}">${sl.s}<br><span class="lbl-s">${sl.e}</span></th>${DAYS.map(d => {
-      const c = TTb.cells[d + '-' + i]; const date = addDays(ui.ttWeek, d - 1);
+      const date = addDays(ui.ttWeek, d - 1); const c = cellAt(d, i, date);
       if (!c) return `<td class="${date === today ? 'is-today' : ''}"><button class="tt-empty" data-cell="${d}-${i}" aria-label="${T('ttAdd')}">+</button></td>`;
       const les = ttCellLesson(d, i, c);
-      return `<td class="${date === today ? 'is-today' : ''}"><button class="tt-cell" data-cell="${d}-${i}" style="background:var(--d-${c.color || 'gris1'})"><b>${esc(c.subject || cname(c.classId))}</b>${c.classId && c.subject ? `<span>${esc(cname(c.classId))}</span>` : ''}${c.room ? `<span>${T('room')} ${esc(c.room)}</span>` : ''}${les ? `<span class="tt-les">✓ ${esc(les.topic || T('lesson'))}</span>` : ''}${c.pageId ? `<span class="tt-pg">▸ ${T('page')}</span>` : ''}</button></td>`;
+      return `<td class="${date === today ? 'is-today' : ''}"><button class="tt-cell" data-cell="${d}-${i}" style="background:var(--d-${c.color || 'gris1'})"><b>${esc(c.subject || cname(c.classId))}</b>${c.classId && c.subject ? `<span>${esc(cname(c.classId))}</span>` : ''}${c.room ? `<span>${T('room')} ${esc(c.room)}</span>` : ''}${les ? `<span class="tt-les">✓ ${esc(les.topic || T('lesson'))}</span>` : ''}${c.pageId ? `<span class="tt-pg">▸ ${T('page')}</span>` : ''}${c.once ? `<span class="tt-once">${T('ttOnceTag')}</span>` : ''}</button></td>`;
     }).join('')}</tr>`).join('')}
   </tbody></table></div>`;
 }
 function cellDialog(d, i) {
-  const k = d + '-' + i, c = D.timetable.cells[k] || {}, sl = D.timetable.slots[i], S = A.state;
-  const date = addDays(ui.ttWeek, d - 1);
+  const k = d + '-' + i, sl = D.timetable.slots[i], S = A.state;
+  const date = addDays(ui.ttWeek, d - 1), ok = date + '|' + i, c = cellAt(d, i, date) || {}, exists = !!(c.once || D.timetable.cells[k]);
   const pages = S.pages.map((p, j) => `<option value="${p.id}" ${c.pageId === p.id ? 'selected' : ''}>${esc(p.name || T('page') + ' ' + (j + 1))}</option>`).join('');
   A.openDlg(`<h2>${cap(fmtDate(date, { weekday: 'long' }))} · ${sl.s}–${sl.e}</h2>
     <form data-role="cellform" class="cd-form" style="padding:0;max-width:none">
@@ -556,10 +562,11 @@ function cellDialog(d, i) {
       <label class="field"><span>${T('class')}</span><select class="inp" name="classId"><option value="">—</option>${S.classes.map(x => `<option value="${x.id}" ${c.classId === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
       <label class="field"><span>${T('linkedPage')}</span><select class="inp" name="pageId"><option value="">—</option>${pages}</select></label>
       <div class="field"><span>${T('color')}</span><div class="row">${TT_COLORS.map(col => `<label class="sw-radio"><input type="radio" name="color" value="${col}" ${(c.color || 'gris1') === col ? 'checked' : ''}><span class="sw" style="background:var(--d-${col})" title="${T('bg_' + col)}"></span></label>`).join('')}</div></div>
+      <label class="chk"><input type="checkbox" name="once" ${c.once ? 'checked' : ''}> ${T('ttOnce').replace('{d}', fmtDate(date, { weekday: 'long', day: 'numeric', month: 'long' }))}</label>
       <label class="chk"><input type="checkbox" name="all"> ${T('ttRepeat')}</label>
-      <div class="row">${D.timetable.cells[k] ? `<button type="button" class="btn btn--black btn--s" data-cact="del">${T('delete')}</button>` : ''}<span style="flex:1"></span>
+      <div class="row">${exists ? `<button type="button" class="btn btn--black btn--s" data-cact="del">${T('delete')}</button>` : ''}<span style="flex:1"></span>
         <button type="button" class="btn btn--ghost" data-act="closeDlg">${T('cancel')}</button><button class="btn">${T('save')}</button></div>
-      ${D.timetable.cells[k] ? `<div class="row" style="border-top:1px solid var(--d-gris1);padding-top:12px">
+      ${exists ? `<div class="row" style="border-top:1px solid var(--d-gris1);padding-top:12px">
         ${c.pageId && S.pages.some(p => p.id === c.pageId) ? `<button type="button" class="btn btn--s" data-cact="page">▸ ${T('openPage')}</button>` : ''}
         <button type="button" class="btn btn--s btn--ghost" data-cact="lesson">${T('lessonOf')} ${fmtDate(date, { day: 'numeric', month: 'short' })}</button></div>` : ''}
     </form>`, body => {
@@ -567,15 +574,18 @@ function cellDialog(d, i) {
     f.onsubmit = e => {
       e.preventDefault();
       const o = { subject: f.subject.value.trim(), room: f.room.value.trim(), classId: f.classId.value, pageId: f.pageId.value, color: (f.querySelector('[name=color]:checked') || {}).value || 'gris1' };
+      if (f.once.checked) { D.timetable.once[ok] = { ...o }; saveSoon(); A.closeDlg(); render(); return; }
+      if (c.once) delete D.timetable.once[ok];
       const keys = f.all.checked ? D.timetable.slots.map((s, j) => j).filter(j => !D.timetable.slots[j].brk).map(j => d + '-' + j).filter(kk => kk === k || !D.timetable.cells[kk]) : [k];
       keys.forEach(kk => { D.timetable.cells[kk] = { ...o }; });
       saveSoon(); A.closeDlg(); render();
     };
     // la case « toute la journée » n'a de sens qu'à la création
-    f.all.closest('label').hidden = !!D.timetable.cells[k];
+    const syncAll = () => { f.all.closest('label').hidden = exists || f.once.checked; };
+    f.once.onchange = syncAll; syncAll();
     body.querySelectorAll('[data-cact]').forEach(b => b.onclick = () => {
       const a = b.dataset.cact;
-      if (a === 'del') { delete D.timetable.cells[k]; saveSoon(); A.closeDlg(); render(); }
+      if (a === 'del') { if (c.once) delete D.timetable.once[ok]; else delete D.timetable.cells[k]; saveSoon(); A.closeDlg(); render(); }
       if (a === 'page') { A.closeDlg(); open = false; render(); A.goPage(c.pageId); }
       if (a === 'lesson') {
         let l = ttCellLesson(d, i, c);
@@ -587,12 +597,11 @@ function cellDialog(d, i) {
 }
 function fillWeekFromTimetable() {
   let n = 0;
-  Object.entries(D.timetable.cells).forEach(([k, c]) => {
-    const [d, i] = k.split('-').map(Number); const sl = D.timetable.slots[i]; if (!sl || sl.brk) return;
-    const date = addDays(ui.week, d - 1);
+  DAYS.forEach(d => D.timetable.slots.forEach((sl, i) => {
+    const date = addDays(ui.week, d - 1), c = cellAt(d, i, date); if (!c || sl.brk) return;
     if (D.lessons.some(l => l.date === date && l.time === sl.s && (!c.classId || l.classId === c.classId))) return;
     D.lessons.push({ id: uid(), date, time: sl.s, classId: c.classId || '', topic: c.subject || '', objectives: '', homework: '', notes: '', pageId: c.pageId || '' }); n++;
-  });
+  }));
   saveSoon(); return n;
 }
 async function importEvents(file) {
@@ -670,6 +679,9 @@ function remapCells(removed) {
   const out = {};
   Object.entries(D.timetable.cells).forEach(([k, c]) => { const [d, i] = k.split('-').map(Number); if (i === removed) return; out[d + '-' + (i > removed ? i - 1 : i)] = c; });
   D.timetable.cells = out;
+  const o2 = {};
+  Object.entries(D.timetable.once || {}).forEach(([k, c]) => { const [dt, i0] = k.split('|'), i = +i0; if (i === removed) return; o2[dt + '|' + (i > removed ? i - 1 : i)] = c; });
+  D.timetable.once = o2;
 }
 
 /* ---------- CSV ---------- */

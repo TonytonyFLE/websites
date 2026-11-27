@@ -82,3 +82,8 @@ Widget « Horaire auto » (facultatif) : enchaîne cours → pause → cours sel
 Bouton « Masquer » à gauche de la barre du bas : le tableau prend toute la hauteur ; un bouton discret « Outils »
 en bas à droite la fait revenir. Le choix est mémorisé.
 À chaque publication, augmenter le numéro « ?v=… » des fichiers CSS/JS dans index.html, sinon les navigateurs gardent l'ancienne version en cache.
+
+## v1.7.4 (27.11.2026) : cours uniques dans l'emploi du temps
+Case « Cours unique : seulement le …, ne se répète pas » dans une case de l'emploi du temps : enregistré pour cette date
+seulement (D.timetable.once, clé « AAAA-MM-JJ|créneau »), remplace le cours hebdomadaire ce jour-là, étiquette « Unique »,
+repris par l'Horaire auto et « Remplir la semaine ».

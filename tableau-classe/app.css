@@ -567,3 +567,5 @@ body.prof-open .dock-show { display: none; }
 .prof-main { min-height: 0; overscroll-behavior: contain; }
 form[data-role=slotform] input[type=time] { min-width: 120px; font-variant-numeric: tabular-nums; }
 .btn[aria-pressed=true] { background: var(--d-rot); color: var(--d-blanc); border-color: var(--d-rot); }
+.tt-once { align-self: start; font-size: 11px; font-weight: 700; background: var(--d-blanc); color: var(--d-noir); border: 1px solid var(--d-noir); border-radius: 999px; padding: 0 7px; margin-top: 2px; }
+.tt-once { align-self: flex-start; justify-self: start; width: max-content; }
