@@ -524,7 +524,7 @@ const WIDGETS = {
       const roll = () => Array.from({ length: st.count }, () => 1 + Math.floor(Math.random() * KINDS[st.kind]));
       function render(anim) {
         const sum = st.values.reduce((a, c) => a + c, 0);
-        b.innerHTML = `<div class="big"><div><div class="dice-row">${st.values.map(face).join('')}</div>${st.count > 1 && st.kind !== 'coin' ? `<div class="dice-sum">${T('total')} : ${sum}</div>` : ''}</div></div>
+        b.innerHTML = `<div class="big"><div><div class="dice-row" data-n="${st.values.length}">${st.values.map(face).join('')}</div>${st.count > 1 && st.kind !== 'coin' ? `<div class="dice-sum">${T('total')} : ${sum}</div>` : ''}</div></div>
           <div class="ctl"><select class="inp" data-role="kind" aria-label="${T('diceType')}">${Object.keys(KINDS).map(k => `<option value="${k}" ${k === st.kind ? 'selected' : ''}>${k === 'coin' ? T('coin') : k.toUpperCase().replace('D', T('dieShort'))}</option>`).join('')}</select>
           <select class="inp" data-role="count" aria-label="${T('dice')}">${[1, 2, 3, 4, 5, 6].map(n => `<option ${n === st.count ? 'selected' : ''}>${n}</option>`).join('')}</select>
           <button class="btn" data-act="roll">${st.kind === 'coin' ? T('flip') : T('roll')}</button></div>`;

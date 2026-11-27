@@ -577,3 +577,10 @@ form[data-role=slotform] input[type=time] { min-width: 120px; font-variant-numer
 /* v1.8.2 — pièce : texte centré (la grille 3×3 du dé ne s'applique pas) */
 .die--coin { grid-template: 1fr / 1fr; text-align: center; }
 .die--coin span { padding: 0 8%; line-height: 1.1; }
+
+/* v1.8.3 — dé : marge intérieure proportionnelle au dé (le % se calculait sur la largeur de la rangée → points invisibles dès 4 dés) */
+.die { padding: calc(var(--die, 30cqmin) * .12); width: clamp(44px, var(--die, 30cqmin), 180px); }
+.die--coin, .die--poly { padding: 0; }
+.dice-row[data-n="3"] { --die: 26cqmin; }
+.dice-row[data-n="4"] { --die: 23cqmin; }
+.dice-row[data-n="5"], .dice-row[data-n="6"] { --die: 20cqmin; }
