@@ -410,3 +410,40 @@ a.btn { text-decoration: none; }
 .sch-list li.is-p { color: var(--d-gris4); }
 .sch-list li.is-past { text-decoration: line-through; color: var(--d-gris4); }
 .sch-list li.is-cur { border-left-color: var(--d-rot); background: var(--d-gris1); font-weight: 700; color: var(--d-noir); text-decoration: none; }
+
+/* ---------- v1.4 : agenda connecté, import CSV ---------- */
+.search { flex: 1 1 220px; max-width: 360px; display: flex; }
+.search .inp { width: 100%; }
+.rt-box { border: 2px solid var(--d-gris2); border-radius: var(--d-radius-s); overflow: hidden; background: var(--d-blanc); }
+.rt-box:focus-within { border-color: var(--d-rot); }
+.rt-tools { display: flex; gap: 4px; align-items: center; padding: 4px 6px; border-bottom: 1px solid var(--d-gris1); flex-wrap: wrap; }
+.rt-tools .tb { height: 26px; min-width: 26px; font-size: 13px; }
+.hl-btn { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--d-noir); cursor: pointer; padding: 0; }
+.rt-edit { min-height: 64px; padding: 6px 10px; outline: none; }
+.rt-edit:empty::before { content: attr(data-ph); color: var(--d-gris4); }
+.rt b, .rt strong { font-weight: 700; }
+.hl-gelb { background: var(--d-gelb); } .hl-blau { background: var(--d-blau); } .hl-gruen { background: var(--d-gruen); } .hl-orange { background: var(--d-orange); } .hl-pink { background: var(--d-pink); }
+.rt [class^="hl-"] { color: var(--d-noir); padding: 0 2px; border-radius: 3px; }
+.sw--none { position: relative; }
+.sw--none::after { content: ""; position: absolute; left: 50%; top: 2px; bottom: 2px; width: 2px; background: var(--d-noir); transform: rotate(45deg); }
+.lesson { border-left-width: 8px; }
+.tag--task { background: var(--d-gruen); }
+.ltasks { display: grid; gap: 2px; margin-top: 4px; }
+.ltasks .is-done { text-decoration: line-through; color: var(--d-gris4); }
+.todo-list { display: grid; gap: 4px; }
+.todo { display: flex; gap: 8px; align-items: center; border: 1px solid var(--d-gris1); border-radius: 8px; padding: 4px 6px 4px 10px; font-weight: 400; }
+.todo input { width: 18px; height: 18px; accent-color: var(--d-rot); flex: none; }
+.todo-t { flex: 1; }
+.todo.is-done .todo-t { text-decoration: line-through; color: var(--d-gris4); }
+.todo.is-late { border-color: var(--d-pink); border-width: 2px; }
+.todo .w-x { width: 26px; height: 26px; font-size: 15px; }
+.sres { appearance: none; display: block; width: 100%; text-align: left; border: 1px solid var(--d-gris1); background: var(--d-blanc); border-radius: 10px; padding: 8px 12px; cursor: pointer; font-weight: 400; color: var(--d-noir); line-height: 1.45; }
+.sres:hover { border-color: var(--d-rot); }
+.sres b { font-weight: 700; }
+.sres-snip { font-size: 14px; }
+mark { background: var(--d-gelb); color: var(--d-noir); padding: 0 2px; border-radius: 3px; }
+.lesson.is-flash { outline: 3px solid var(--d-rot); outline-offset: 2px; }
+.csv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.csv-item { border: 1px solid var(--d-gris1); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; }
+.csv-item b { font-weight: 700; }
+.doc-row--shared { flex-wrap: wrap; } .doc-row--shared .doc-open { flex: 1; cursor: default; }

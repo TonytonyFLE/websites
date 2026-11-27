@@ -790,7 +790,7 @@ function fmtNum(v) { return String(parseFloat(v.toPrecision(12))); }
 function exportPDF(html, title) {
   const base = location.href.replace(/[^/]*$/, '');
   const doc = `<!doctype html><html lang="${S.lang}"><head><meta charset="utf-8"><title>${esc(title || T('textExport'))}</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,300;0,400;0,700;1,300&display=swap">
+  <link rel="stylesheet" href="${base}fonts/fonts.css">
   <style>@page{size:A4;margin:18mm 20mm 20mm}body{font-family:"Atkinson Hyperlegible Next",Verdana,sans-serif;font-weight:300;font-size:12pt;line-height:1.45;color:#000;margin:0}
   header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid #DADADA;padding-bottom:8px;margin-bottom:18px}
   header img{height:12mm} header span{font-size:9pt;color:#575757;font-weight:400}
@@ -1047,6 +1047,7 @@ let rzT; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setT
 window.DidacApp = {
   T, esc, uid, h, $, LS, ICON, pad, todayISO, locale, download, exportPDF, openDlg, closeDlg, confirmBox, openClasses,
   get state() { return S; }, classById, save, addWidget, iconPicker,
+  addPage(name) { const p = { id: uid(), name: name || '', bg: 'blanc', widgets: [] }; S.pages.push(p); save(); renderTabs(); return p.id; },
   goPage(id) { const i = S.pages.findIndex(p => p.id === id); if (i < 0) return; S.current = i; save(); renderTabs(); renderBoard(); }
 };
 

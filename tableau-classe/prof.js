@@ -67,6 +67,7 @@ function normalize(d) {
   d.checklist.template = migrateTemplate(d.checklist.template);
   d.settings = d.settings || { rounding: 0.5 };
   d.docs = d.docs || [];
+  d.todos = d.todos || [];
   d.timetable = d.timetable || { slots: DIDAC_SLOTS.map(x => ({ ...x })), cells: {} };
   return d;
 }
@@ -151,46 +152,148 @@ function addDays(iso, n) { const d = new Date(iso + 'T12:00:00'); d.setDate(d.ge
 function agenda() {
   ui.week = ui.week || mondayOf(todayISO());
   const end = addDays(ui.week, 6);
-  const cls = A.classById(ui.cls);
   const L = D.lessons.filter(l => l.date >= ui.week && l.date <= end && (ui.filterAll || !l.classId || l.classId === ui.cls)).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const ed = ui.editLesson ? D.lessons.find(l => l.id === ui.editLesson) : null;
   const hw = D.lessons.filter(l => l.homework && l.date >= addDays(todayISO(), -14) && (ui.filterAll || !l.classId || l.classId === ui.cls)).sort((a, b) => a.date.localeCompare(b.date));
   const days = {}; L.forEach(l => (days[l.date] = days[l.date] || []).push(l));
-  const cname = id => (A.classById(id) || { name: '—' }).name;
-  return `${pinnedDocs()}<div class="row">${classPicker()}<label class="chk"><input type="checkbox" data-role="allcls" ${ui.filterAll ? 'checked' : ''}> ${T('allClasses')}</label>
-    <span style="flex:1"></span><button class="btn btn--ghost btn--s" data-act="fillWeek">${T('fillWeek')}</button></div>
-  <div class="grid2" style="grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr)">
-    <div class="card">
+  const pageOpts = sel => A.state.pages.map((p, j) => `<option value="${p.id}" ${sel === p.id ? 'selected' : ''}>${esc(p.name || T('page') + ' ' + (j + 1))}</option>`).join('');
+  const main = ui.q ? searchResults() : `<div class="card">
       <div class="row"><button class="btn btn--ghost btn--s" data-act="wkPrev">←</button>
         <h3 style="flex:1;text-align:center">${T('week')} ${fmtDate(ui.week, { day: 'numeric', month: 'short' })} – ${fmtDate(end, { day: 'numeric', month: 'short', year: 'numeric' })}</h3>
         <button class="btn btn--ghost btn--s" data-act="wkToday">${T('today')}</button><button class="btn btn--ghost btn--s" data-act="wkNext">→</button></div>
-      ${Object.keys(days).length ? Object.keys(days).map(d => `<div class="day-h">${cap(fmtDate(d))}</div>${days[d].map(l => `
-        <div class="lesson"><div class="lesson-top"><b>${esc(l.time || '')}</b><span class="tag">${esc(cname(l.classId))}</span><b>${esc(l.topic || T('lesson'))}</b></div>
-          ${l.objectives ? `<div><span class="tag tag--obj">${T('objectives')}</span><p>${esc(l.objectives)}</p></div>` : ''}
-          ${l.homework ? `<div><span class="tag tag--hw">${T('homework')}</span><p>${esc(l.homework)}</p></div>` : ''}
-          ${l.notes ? `<div><span class="tag">${T('notes')}</span><p>${esc(l.notes)}</p></div>` : ''}
-          <div class="row"><button class="btn btn--ghost btn--s" data-editl="${l.id}">${T('edit')}</button><button class="btn btn--ghost btn--s" data-checkl="${l.id}">${T('p_checklist')}</button>${l.pageId && A.state.pages.some(p => p.id === l.pageId) ? `<button class="btn btn--s" data-gopage="${l.pageId}">▸ ${T('openPage')}</button>` : ''}</div></div>`).join('')}`).join('')
-      : `<p class="lbl-s">${T('noLesson')}</p>`}
-    </div>
+      ${Object.keys(days).length ? Object.keys(days).map(d => `<div class="day-h">${cap(fmtDate(d))}</div>${days[d].map(lessonCard).join('')}`).join('') : `<p class="lbl-s">${T('noLesson')}</p>`}
+    </div>`;
+  return `${pinnedDocs()}<div class="row">${classPicker()}<label class="chk"><input type="checkbox" data-role="allcls" ${ui.filterAll ? 'checked' : ''}> ${T('allClasses')}</label>
+    <label class="search"><span class="sr">${T('search')}</span><input class="inp" type="search" data-role="search" value="${esc(ui.q || '')}" placeholder="${T('searchPh')}"></label>
+    <span style="flex:1"></span><button class="btn btn--ghost btn--s" data-act="fillWeek">${T('fillWeek')}</button></div>
+  <div class="grid2" style="grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr)">
+    ${main}
     <div style="display:grid;gap:16px">
-      ${eventsCard()}
       <form class="card" data-role="lessonform">
         <h3>${ed ? T('editLesson') : T('newLesson')}</h3>
         <div class="row"><label class="field" style="flex:1"><span>${T('date')}</span><input class="inp" type="date" name="date" value="${esc(ed ? ed.date : todayISO())}" required></label>
           <label class="field"><span>${T('time')}</span><input class="inp" type="time" name="time" value="${esc(ed ? ed.time : '')}"></label></div>
-        ${A.state.classes.length ? `<label class="field"><span>${T('class')}</span><select class="inp" name="classId">${A.state.classes.map(c => `<option value="${c.id}" ${(ed ? ed.classId : ui.cls) === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` : ''}
+        ${A.state.classes.length ? `<label class="field"><span>${T('class')}</span><select class="inp" name="classId"><option value="">—</option>${A.state.classes.map(c => `<option value="${c.id}" ${(ed ? ed.classId : ui.cls) === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` : ''}
         <label class="field"><span>${T('topic')}</span><input class="inp" name="topic" value="${esc(ed ? ed.topic : '')}"></label>
-        <label class="field"><span>${T('objectives')}</span><textarea class="inp" name="objectives" placeholder="${T('objPh')}">${esc(ed ? ed.objectives : '')}</textarea></label>
-        <label class="field"><span>${T('homework')}</span><textarea class="inp" name="homework">${esc(ed ? ed.homework : '')}</textarea></label>
-        <label class="field"><span>${T('notes')}</span><textarea class="inp" name="notes">${esc(ed ? ed.notes : '')}</textarea></label>
-        <label class="field"><span>${T('linkedPage')}</span><select class="inp" name="pageId"><option value="">—</option>${A.state.pages.map((p, j) => `<option value="${p.id}" ${ed && ed.pageId === p.id ? 'selected' : ''}>${esc(p.name || T('page') + ' ' + (j + 1))}</option>`).join('')}</select></label>
+        <div class="field"><span>${T('lessonColor')}</span><div class="row">${['', ...HL].map(c => `<label class="sw-radio"><input type="radio" name="color" value="${c}" ${((ed && ed.color) || '') === c ? 'checked' : ''}><span class="sw ${c ? '' : 'sw--none'}" style="background:${c ? 'var(--d-' + c + ')' : '#fff'}" title="${c ? T('bg_' + c) : T('noColor')}"></span></label>`).join('')}</div></div>
+        ${rtField('objectives', T('objectives'), ed && ed.objectives, T('objPh'))}
+        ${rtField('homework', T('homework'), ed && ed.homework)}
+        ${rtField('notes', T('notes'), ed && ed.notes)}
+        <label class="field"><span>${T('lessonTasks')}</span><textarea class="inp" name="tasks" placeholder="${T('lessonTasksPh')}">${esc(ed && ed.tasks ? ed.tasks.map(t => t.t).join('\n') : '')}</textarea></label>
+        <label class="field"><span>${T('linkedPage')}</span><select class="inp" name="pageId"><option value="">—</option>${pageOpts(ed && ed.pageId)}</select></label>
         <div class="row"><button class="btn">${T('save')}</button>${ed ? `<button type="button" class="btn btn--ghost" data-act="cancelEdit">${T('cancel')}</button><span style="flex:1"></span><button type="button" class="btn btn--black btn--s" data-act="delLesson">${T('delete')}</button>` : ''}</div>
       </form>
+      ${todoCard()}
+      ${eventsCard()}
       <div class="card"><h3>${T('homeworkList')}</h3>
-        ${hw.length ? hw.map(l => `<div class="lesson" style="border-left-color:var(--d-gelb)"><div class="lesson-top"><b>${cap(fmtDate(l.date, { weekday: 'short', day: 'numeric', month: 'short' }))}</b><span class="tag">${esc(cname(l.classId))}</span></div><p>${esc(l.homework)}</p></div>`).join('') : `<p class="lbl-s">${T('noHomework')}</p>`}
+        ${hw.length ? hw.map(l => `<div class="lesson" style="border-left-color:var(--d-gelb)"><div class="lesson-top"><b>${cap(fmtDate(l.date, { weekday: 'short', day: 'numeric', month: 'short' }))}</b><span class="tag">${esc(cname(l.classId))}</span></div><div class="rt">${rich(l.homework)}</div></div>`).join('') : `<p class="lbl-s">${T('noHomework')}</p>`}
       </div>
     </div>
   </div>`;
+}
+const cname = id => (A.classById(id) || { name: '—' }).name;
+function lessonCard(l) {
+  const tasks = l.tasks || [];
+  return `<div class="lesson ${l.color ? 'lesson--c' : ''}" style="${l.color ? `border-left-color:var(--d-${l.color})` : ''}" id="les-${l.id}">
+    <div class="lesson-top"><b>${esc(l.time || '')}</b><span class="tag">${esc(cname(l.classId))}</span><b>${esc(l.topic || T('lesson'))}</b>${l.color ? `<span class="tag" style="background:var(--d-${l.color})">${T('bg_' + l.color)}</span>` : ''}</div>
+    ${l.objectives ? `<div><span class="tag tag--obj">${T('objectives')}</span><div class="rt">${rich(l.objectives)}</div></div>` : ''}
+    ${l.homework ? `<div><span class="tag tag--hw">${T('homework')}</span><div class="rt">${rich(l.homework)}</div></div>` : ''}
+    ${l.notes ? `<div><span class="tag">${T('notes')}</span><div class="rt">${rich(l.notes)}</div></div>` : ''}
+    ${tasks.length ? `<div><span class="tag tag--task">${T('lessonTasks')}</span><div class="ltasks">${tasks.map((t, i) => `<label class="chk"><input type="checkbox" data-ltask="${l.id}|${i}" ${t.d ? 'checked' : ''}> <span class="${t.d ? 'is-done' : ''}">${esc(t.t)}</span></label>`).join('')}</div></div>` : ''}
+    <div class="row"><button class="btn btn--ghost btn--s" data-editl="${l.id}">${T('edit')}</button><button class="btn btn--ghost btn--s" data-checkl="${l.id}">${T('p_checklist')}</button>
+      ${tasks.length ? `<button class="btn btn--ghost btn--s" data-tasks2page="${l.id}">${T('tasksToPage')}</button>` : ''}
+      ${l.pageId && A.state.pages.some(p => p.id === l.pageId) ? `<button class="btn btn--s" data-gopage="${l.pageId}">▸ ${T('openPage')}</button>` : ''}</div></div>`;
+}
+
+/* ----- Texte enrichi (gras + surlignage couleur) pour objectifs, devoirs, remarques ----- */
+const HL = ['gelb', 'blau', 'gruen', 'orange', 'pink'];
+const ALLOWED = new Set(['b', 'strong', 'i', 'em', 'u', 'br', 'div', 'p', 'span', 'ul', 'ol', 'li']);
+function cleanHTML(html) {
+  html = String(html || '');
+  if (!/[<>]/.test(html)) html = esc(html).replace(/\n/g, '<br>');
+  const doc = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html'); const root0 = doc.body.firstChild;
+  (function walk(n) {
+    for (const c of [...n.childNodes]) {
+      if (c.nodeType === 3) continue;
+      if (c.nodeType !== 1) { c.remove(); continue; }
+      const tag = c.tagName.toLowerCase();
+      if (['script', 'style', 'iframe', 'object', 'img', 'svg'].includes(tag)) { c.remove(); continue; }
+      walk(c);
+      if (!ALLOWED.has(tag)) { c.replaceWith(...c.childNodes); continue; }
+      for (const a of [...c.attributes]) if (!(a.name === 'class' && /^hl-(gelb|blau|gruen|orange|pink)$/.test(a.value))) c.removeAttribute(a.name);
+    }
+  })(root0);
+  return root0.innerHTML;
+}
+const rich = html => cleanHTML(html);
+const plain = html => { const d = document.createElement('div'); d.innerHTML = cleanHTML(html); return d.textContent || ''; };
+function rtField(name, label, val, ph) {
+  return `<div class="field"><span>${label}</span><div class="rt-box">
+    <div class="rt-tools"><button type="button" class="tb" data-rtcmd="bold" title="${T('bold')}"><b>B</b></button>
+      ${HL.map(c => `<button type="button" class="hl-btn" data-rthl="${c}" style="background:var(--d-${c})" title="${T('highlight')} ${T('bg_' + c)}" aria-label="${T('highlight')} ${T('bg_' + c)}"></button>`).join('')}
+      <button type="button" class="tb" data-rthl="" title="${T('removeHl')}">${T('removeHlShort')}</button></div>
+    <div class="rt-edit rt" contenteditable="true" data-rt="${name}" data-ph="${ph ? esc(ph) : ''}">${cleanHTML(val)}</div></div></div>`;
+}
+function applyHL(color) {
+  const sel = window.getSelection(); if (!sel.rangeCount) return;
+  const box = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement).closest('.rt-edit'); if (!box) return;
+  const inHL = (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement).closest('[class^="hl-"]');
+  if (inHL && box.contains(inHL)) { if (color) inHL.className = 'hl-' + color; else inHL.replaceWith(...inHL.childNodes); return; }
+  if (sel.isCollapsed || !color) return;
+  const r = sel.getRangeAt(0), span = document.createElement('span'); span.className = 'hl-' + color;
+  try { r.surroundContents(span); } catch (e) { span.appendChild(r.extractContents()); r.insertNode(span); }
+  sel.removeAllRanges();
+}
+
+/* ----- Mes tâches (liste générale) ----- */
+function todoCard() {
+  const T0 = D.todos.slice().sort((a, b) => (a.done - b.done) || (a.due || '9999').localeCompare(b.due || '9999'));
+  const open0 = T0.filter(t => !t.done).length;
+  return `<form class="card" data-role="todoform"><h3>${T('myTasks')}</h3>
+    <div class="row"><input class="inp" name="text" required placeholder="${T('taskPh')}" style="flex:1;min-width:150px" aria-label="${T('task')}">
+      <input class="inp" type="date" name="due" aria-label="${T('dueDate')}" title="${T('dueDate')}">
+      <button class="btn">${T('add')}</button></div>
+    ${T0.length ? `<div class="todo-list">${T0.map(t => `<div class="todo ${t.done ? 'is-done' : ''} ${t.due && !t.done && t.due < todayISO() ? 'is-late' : ''}">
+        <input type="checkbox" data-todo="${t.id}" ${t.done ? 'checked' : ''} aria-label="${esc(t.text)}"><span class="todo-t">${esc(t.text)}</span>
+        ${t.due ? `<span class="tag">${fmtDate(t.due, { day: 'numeric', month: 'short' })}</span>` : ''}
+        <button type="button" class="w-x" data-tododel="${t.id}" aria-label="${T('delete')}" title="${T('delete')}">×</button></div>`).join('')}</div>` : `<p class="lbl-s" style="margin:0">${T('noTasks')}</p>`}
+    ${open0 ? `<div class="row"><button type="button" class="btn btn--ghost btn--s" data-act="todos2page">${T('tasksToPage')}</button>${T0.length > open0 ? `<button type="button" class="btn btn--ghost btn--s" data-act="todoClean">${T('clearDone')}</button>` : ''}</div>` : ''}
+  </form>`;
+}
+
+/* ----- Recherche dans l'agenda ----- */
+function searchResults() {
+  const q = ui.q.trim().toLowerCase();
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const nq = norm(q);
+  const mark = (txt) => { const t = String(txt); const i = norm(t).indexOf(nq); if (i < 0) return esc(t.length > 140 ? t.slice(0, 140) + '…' : t); const a = Math.max(0, i - 50); return (a ? '…' : '') + esc(t.slice(a, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length, i + q.length + 80)) + '…'; };
+  const R = [];
+  D.lessons.forEach(l => {
+    const fields = [[T('topic'), l.topic], [T('objectives'), plain(l.objectives)], [T('homework'), plain(l.homework)], [T('notes'), plain(l.notes)], [T('lessonTasks'), (l.tasks || []).map(t => t.t).join(' · ')], [T('class'), cname(l.classId)]];
+    const hit = fields.find(([, v]) => v && norm(v).includes(nq));
+    if (hit) R.push({ kind: 'lesson', date: l.date, id: l.id, title: `${l.topic || T('lesson')} · ${cname(l.classId)}`, where: hit[0], snip: mark(hit[1]) });
+  });
+  D.todos.forEach(t => { if (norm(t.text).includes(nq)) R.push({ kind: 'todo', date: t.due || '', title: T('task'), where: '', snip: mark(t.text) }); });
+  (A.state.events || []).forEach(e => { const txt = e.title + ' ' + (e.note || ''); if (norm(txt).includes(nq)) R.push({ kind: 'event', date: e.date.slice(0, 10), title: T('events'), where: '', snip: mark(txt) }); });
+  R.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  return `<div class="card"><div class="row"><h3 style="flex:1">${T('searchResults').replace('{n}', R.length)} « ${esc(ui.q)} »</h3><button class="btn btn--ghost btn--s" data-act="clearSearch">${T('close')}</button></div>
+    ${R.length ? R.map(r => `<button class="sres" ${r.kind === 'lesson' ? `data-goles="${r.id}"` : ''}><span class="tag ${r.kind === 'todo' ? 'tag--task' : r.kind === 'event' ? 'tag--obj' : ''}">${r.date ? fmtDate(r.date, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</span> <b>${esc(r.title)}</b>${r.where ? ` <span class="lbl-s">${esc(r.where)}</span>` : ''}<br><span class="sres-snip">${r.snip}</span></button>`).join('') : `<p class="lbl-s">${T('noResults')}</p>`}</div>`;
+}
+
+/* ----- Envoyer des tâches vers une page du tableau (outil Planning) ----- */
+function tasksToPage(title, items, pageId) {
+  const S = A.state;
+  A.openDlg(`<h2>${T('tasksToPage')}</h2>
+    <label class="field"><span>${T('choosePage')}</span><select class="inp" id="t2p">${S.pages.map((p, j) => `<option value="${p.id}" ${p.id === (pageId || (S.pages[S.current] || {}).id) ? 'selected' : ''}>${esc(p.name || T('page') + ' ' + (j + 1))}</option>`).join('')}<option value="__new">+ ${T('addPage')}</option></select></label>
+    <p class="lbl-s" style="margin:0">${T('tasksToPageHint').replace('{n}', items.length)}</p>
+    <div class="row row--end"><button class="btn btn--ghost" data-act="closeDlg">${T('cancel')}</button><button class="btn" id="t2pOk">${T('ok')}</button></div>`, body => {
+    $('#t2pOk', body).onclick = () => {
+      let id = $('#t2p', body).value;
+      if (id === '__new') id = A.addPage(title);
+      A.closeDlg(); open = false; render(); A.goPage(id);
+      A.addWidget('plan', { title, items: items.map(t => ({ t, d: false, icon: '' })), mode: 'check' });
+    };
+  });
 }
 
 /* ----- Évènements (non chiffrés : visibles par le compte à rebours du tableau) ----- */
@@ -310,6 +413,7 @@ function checklist() {
 function settings() {
   const v = LS.get(VKEY, {});
   return `<div class="grid2">
+    ${csvCard()}
     <form class="card" data-role="pwform"><h3>${T('changePw')}</h3>
       <label class="field"><span>${T('newPw')}</span><input class="inp" type="password" name="pw" minlength="8" required autocomplete="new-password"></label>
       <label class="field"><span>${T('passwordAgain')}</span><input class="inp" type="password" name="pw2" minlength="8" required autocomplete="new-password"></label>
@@ -367,6 +471,16 @@ window.DidacDocs = {
 
 const DOC_CATS = ['termine', 'ferien', 'semester', 'stundenplan', 'other'];
 const fmtSize = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' Mo' : Math.max(1, Math.round(n / 1024)) + ' Ko';
+/* Documents Didac communs à tous les profs (fichiers publics du site, dossier docs/) */
+const SHARED_DOCS = [
+  { title: 'Datenschutz-Merkblatt Klassenbildschirm', tag: 'DE', pdf: 'docs/Datenschutz_Klassenbildschirm_Didac.pdf', file: 'docs/Datenschutz_Klassenbildschirm_Didac.docx', ext: 'Word' },
+  { title: 'Didac Vorlage Word (Farbe)', tag: 'DE', file: 'docs/Didac_Vorlage_Word_DE.dotx', ext: 'Word' },
+  { title: 'Didac Modèle Word (couleur)', tag: 'FR', file: 'docs/Didac_Modele_Word_FR.dotx', ext: 'Word' }];
+function sharedDocs() {
+  return `<div class="card"><h3>${T('didacDocs')}</h3><p class="lbl-s" style="margin:0 0 6px">${T('didacDocsHint')}</p>${SHARED_DOCS.map(d => `<div class="doc-row doc-row--shared"><span class="doc-open">${ICON('news-paper')}<span><b>${esc(d.title)}</b> <span class="tag">${d.tag}</span></span></span>
+    ${d.pdf ? `<a class="btn btn--ghost btn--s" href="${d.pdf}" target="_blank" rel="noopener">${T('openPdf')}</a>` : ''}
+    <a class="btn btn--ghost btn--s" href="${d.file}" download>${T('download')} (${d.ext})</a></div>`).join('')}</div>`;
+}
 function documents() {
   const docs = D.docs;
   const view = ui.docView ? docs.find(d => d.id === ui.docView) : null;
@@ -375,6 +489,7 @@ function documents() {
       <a class="btn btn--ghost btn--s" href="${ui.docURL}" download="${esc(view.name)}">${T('download')}</a>
       <button class="btn btn--s" data-act="docClose">${T('close')}</button></div>
       <iframe class="doc-frame" src="${ui.docURL}" title="${esc(view.title || view.name)}"></iframe></div>` : ''}
+  ${sharedDocs()}
   <form class="card" data-role="docform"><h3>${T('addDoc')}</h3>
     <div class="row">
       <label class="field" style="flex:2;min-width:200px"><span>${T('docFile')}</span><input class="inp" type="file" name="file" accept="application/pdf,.pdf" required></label>
@@ -515,10 +630,27 @@ function bindExtra() {
       D.timetable.slots = slots; ui.ttEdit = false; saveSoon(); render();
     }
   });
-  root.addEventListener('change', e => { if (e.target.dataset.role === 'evimport' && e.target.files[0]) importEvents(e.target.files[0]); });
+  root.addEventListener('change', e => {
+    const t = e.target;
+    if (t.dataset.role === 'evimport' && t.files[0]) importEvents(t.files[0]);
+    if (t.dataset.ltask) { const [id, i] = t.dataset.ltask.split('|'); const l = D.lessons.find(x => x.id === id); if (l && l.tasks[+i]) { l.tasks[+i].d = t.checked; saveSoon(); render(); } }
+    if (t.dataset.todo) { const td = D.todos.find(x => x.id === t.dataset.todo); if (td) { td.done = t.checked; saveSoon(); render(); } }
+  });
+  root.addEventListener('input', e => {
+    if (e.target.dataset.role !== 'search') return;
+    ui.q = e.target.value; render();
+    const i = root.querySelector('[data-role=search]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+  });
+  root.addEventListener('mousedown', e => { if (e.target.closest('.rt-tools button')) e.preventDefault(); });
   root.addEventListener('click', async e => {
     const t = e.target;
     const op = t.closest('[data-docopen]'); if (op) { openDoc(op.dataset.docopen); return; }
+    const rc = t.closest('[data-rtcmd]'); if (rc) { document.execCommand(rc.dataset.rtcmd, false, null); return; }
+    const rh = t.closest('[data-rthl]'); if (rh) { applyHL(rh.dataset.rthl); return; }
+    const tp = t.closest('[data-tasks2page]'); if (tp) { const l = D.lessons.find(x => x.id === tp.dataset.tasks2page); tasksToPage(l.topic || T('w_plan'), l.tasks.filter(x => !x.d).map(x => x.t).concat(l.tasks.every(x => x.d) ? l.tasks.map(x => x.t) : []), l.pageId); return; }
+    const td = t.closest('[data-tododel]'); if (td) { D.todos = D.todos.filter(x => x.id !== td.dataset.tododel); saveSoon(); render(); return; }
+    const gl = t.closest('[data-goles]');
+    if (gl) { const l = D.lessons.find(x => x.id === gl.dataset.goles); ui.q = ''; ui.week = mondayOf(l.date); ui.editLesson = l.id; if (l.classId) ui.cls = l.classId; render(); const c = root.querySelector('#les-' + l.id); if (c) { c.scrollIntoView({ block: 'center' }); c.classList.add('is-flash'); } return; }
     const dd = t.closest('[data-docdel]');
     if (dd) { const m = D.docs.find(x => x.id === dd.dataset.docdel); if (await A.confirmBox(T('delDocQ').replace('{d}', esc(m.title || m.name)), T('delete'))) { await idbDel(m.id); D.docs = D.docs.filter(x => x !== m); if (ui.docView === m.id) { ui.docView = null; } await persist(); render(); } return; }
     const cell = t.closest('[data-cell]'); if (cell) { const [d, i] = cell.dataset.cell.split('-').map(Number); cellDialog(d, i); return; }
@@ -535,6 +667,9 @@ function bindExtra() {
     if (act === 'slotReset') { if (await A.confirmBox(T('slotResetQ'))) { D.timetable.slots = DIDAC_SLOTS.map(x => ({ ...x })); saveSoon(); render(); } }
     if (act === 'fillWeek') { const n = fillWeekFromTimetable(); render(); A.openDlg(`<h2>${T('p_agenda')}</h2><p>${n ? T('weekFilled').replace('{n}', n) : T('weekFilledNone')}</p><div class="row row--end"><button class="btn" data-act="closeDlg">${T('ok')}</button></div>`); }
     if (act === 'showPast') { ui.showPast = !ui.showPast; render(); }
+    if (act === 'clearSearch') { ui.q = ''; render(); }
+    if (act === 'todos2page') { tasksToPage(T('myTasks'), D.todos.filter(x => !x.done).map(x => x.text)); }
+    if (act === 'todoClean') { D.todos = D.todos.filter(x => !x.done); saveSoon(); render(); }
   });
 }
 // quand on supprime un créneau, les cases des créneaux suivants remontent d'une ligne
@@ -549,8 +684,182 @@ const csvCell = v => { v = String(v ?? ''); return /[";\n]/.test(v) ? '"' + v.re
 const csv = rows => '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\r\n');
 
 /* ---------- Évènements ---------- */
+
+/* =====================================================================
+   IMPORT CSV (modèles téléchargeables, préparables avec une IA)
+   Séparateur ; (Excel suisse) ou , — UTF-8 — 1re ligne = en-têtes FR ou DE
+   ===================================================================== */
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0] || '';
+  const sep = (first.match(/;/g) || []).length >= (first.match(/,/g) || []).length ? ';' : (first.includes('\t') ? '\t' : ',');
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; continue; }
+    if (ch === '"') q = true;
+    else if (ch === sep) { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim() !== ''));
+}
+const normKey = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+function csvObjects(text, aliases) {
+  const rows = parseCSV(text); if (rows.length < 2) return [];
+  const head = rows[0].map(h => { const n = normKey(h); return Object.keys(aliases).find(k => aliases[k].includes(n)) || n; });
+  return rows.slice(1).map(r => { const o = {}; head.forEach((h, i) => { o[h] = (r[i] || '').trim(); }); return o; });
+}
+function parseDate(s) {
+  s = String(s || '').trim(); let m;
+  if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s))) return `${m[1]}-${A.pad(+m[2])}-${A.pad(+m[3])}`;
+  if ((m = /^(\d{1,2})[./](\d{1,2})[./](\d{2,4})/.exec(s))) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; return `${y}-${A.pad(+m[2])}-${A.pad(+m[1])}`; }
+  return '';
+}
+function parseTime(s) { const m = /^(\d{1,2})[:.h](\d{2})/.exec(String(s || '').trim()); return m ? `${A.pad(+m[1])}:${m[2]}` : ''; }
+const COLOR_ALIASES = { gelb: ['jaune', 'gelb', 'yellow'], blau: ['bleu', 'blau', 'blue'], gruen: ['vert', 'grun', 'gruen', 'green'], orange: ['orange'], pink: ['rose', 'pink'], gris1: ['gris', 'grau', 'grey', 'gray'] };
+const parseColor = s => { const n = normKey(s); return Object.keys(COLOR_ALIASES).find(k => COLOR_ALIASES[k].includes(n)) || ''; };
+const DAY_ALIASES = { 1: ['1', 'lundi', 'lu', 'montag', 'mo'], 2: ['2', 'mardi', 'ma', 'dienstag', 'di'], 3: ['3', 'mercredi', 'me', 'mittwoch', 'mi'], 4: ['4', 'jeudi', 'je', 'donnerstag', 'do'], 5: ['5', 'vendredi', 've', 'freitag', 'fr'] };
+const parseDay = s => +(Object.keys(DAY_ALIASES).find(k => DAY_ALIASES[k].includes(normKey(s))) || 0);
+function classByName(name, create) {
+  const S = A.state; const n = String(name || '').trim(); if (!n) return null;
+  let c = S.classes.find(x => x.name.toLowerCase() === n.toLowerCase());
+  if (!c && create) { c = { id: uid(), name: n, students: [] }; S.classes.push(c); }
+  return c;
+}
+
+// Définition des modèles : colonnes FR / DE, exemples, alias acceptés et import
+const CSV_TYPES = {
+  classes: {
+    cols: { fr: ['classe', 'eleve'], de: ['klasse', 'schueler'] },
+    ex: [['10b', 'Anna'], ['10b', 'Luca'], ['ÜFK', 'Giulia']],
+    alias: { classe: ['classe', 'klasse', 'class'], eleve: ['eleve', 'schueler', 'schuler', 'schulerin', 'schuelerin', 'student', 'prenom', 'vorname', 'nom', 'name'] },
+    run(rows) { let n = 0; rows.forEach(r => { const c = classByName(r.classe, true); if (!c || !r.eleve) return; if (!c.students.some(s => s.name === r.eleve)) { c.students.push({ id: uid(), name: r.eleve }); n++; } }); A.save(); window.dispatchEvent(new Event('didac-classes')); return n; }
+  },
+  lessons: {
+    cols: { fr: ['date', 'heure', 'classe', 'theme', 'objectifs', 'devoirs', 'remarques', 'taches', 'couleur'], de: ['datum', 'zeit', 'klasse', 'thema', 'lernziele', 'hausaufgaben', 'bemerkungen', 'aufgaben', 'farbe'] },
+    ex: [['07.12.2026', '09:25', '10b', 'La négation', 'Tu sais dire ne… pas | ne… jamais', 'Fiche p. 4, ex. 1-3', 'Prévoir le jeu de l’oie', 'Distribuer la fiche | Corriger les devoirs', 'jaune'], ['08.12.2026', '13:30', 'ÜFK', 'Motivation', 'Fixer un objectif SMART', '', '', '', 'bleu']],
+    alias: { date: ['date', 'datum'], heure: ['heure', 'zeit', 'time', 'debut', 'beginn'], classe: ['classe', 'klasse'], theme: ['theme', 'thema', 'sujet', 'topic'], objectifs: ['objectifs', 'lernziele', 'ziele'], devoirs: ['devoirs', 'hausaufgaben', 'hausaufgabe'], remarques: ['remarques', 'bemerkungen', 'notes', 'notizen'], taches: ['taches', 'aufgaben', 'tasks', 'deroule', 'ablauf'], couleur: ['couleur', 'farbe', 'color'] },
+    run(rows) {
+      let n = 0;
+      rows.forEach(r => {
+        const date = parseDate(r.date); if (!date) return;
+        const c = classByName(r.classe, true);
+        const lines = s => String(s || '').split('|').map(x => x.trim()).filter(Boolean);
+        const html = s => lines(s).map(esc).join('<br>');
+        D.lessons.push({ id: uid(), date, time: parseTime(r.heure), classId: c ? c.id : '', topic: r.theme || '', objectives: html(r.objectifs), homework: html(r.devoirs), notes: html(r.remarques), tasks: lines(r.taches).map(t => ({ t, d: false })), color: parseColor(r.couleur), pageId: '' });
+        n++;
+      });
+      A.save(); return n;
+    }
+  },
+  events: {
+    cols: { fr: ['titre', 'date', 'heure', 'remarque'], de: ['titel', 'datum', 'zeit', 'bemerkung'] },
+    ex: [['Weihnachtsferien', '24.12.2026', '00:00', 'jusqu’au 10.01.2027'], ['Semesterprüfungen', '25.01.2027', '08:40', 'D, F, M, E']],
+    alias: { titre: ['titre', 'titel', 'title', 'evenement', 'ereignis'], date: ['date', 'datum'], heure: ['heure', 'zeit', 'time'], remarque: ['remarque', 'bemerkung', 'note', 'notiz'] },
+    run(rows) {
+      const S = A.state; S.events = S.events || []; let n = 0;
+      rows.forEach(r => { const d = parseDate(r.date); if (!d || !r.titre) return; const date = `${d}T${parseTime(r.heure) || '08:00'}`; if (S.events.some(e => e.title === r.titre && e.date === date)) return; S.events.push({ id: uid(), title: r.titre, date, note: r.remarque || '' }); n++; });
+      A.save(); window.dispatchEvent(new Event('didac-events')); return n;
+    }
+  },
+  timetable: {
+    cols: { fr: ['jour', 'debut', 'matiere', 'classe', 'salle', 'couleur'], de: ['tag', 'beginn', 'fach', 'klasse', 'zimmer', 'farbe'] },
+    ex: [['lundi', '09:25', 'FrE', '10b', '404', 'bleu'], ['mercredi', '09:25', 'ÜFK', 'ÜFK', '006', 'vert']],
+    alias: { jour: ['jour', 'tag', 'day', 'wochentag'], debut: ['debut', 'beginn', 'heure', 'zeit', 'start'], matiere: ['matiere', 'fach', 'cours', 'kurs', 'subject'], classe: ['classe', 'klasse'], salle: ['salle', 'zimmer', 'raum', 'room'], couleur: ['couleur', 'farbe', 'color'] },
+    run(rows) {
+      let n = 0;
+      rows.forEach(r => {
+        const d = parseDay(r.jour), t = parseTime(r.debut); if (!d || !t) return;
+        const i = D.timetable.slots.findIndex(sl => !sl.brk && sl.s === t); if (i < 0) return;
+        const c = classByName(r.classe, true);
+        D.timetable.cells[d + '-' + i] = { subject: r.matiere || '', classId: c ? c.id : '', room: r.salle || '', pageId: '', color: parseColor(r.couleur) || 'gris1' }; n++;
+      });
+      return n;
+    }
+  },
+  todos: {
+    cols: { fr: ['tache', 'echeance'], de: ['aufgabe', 'faellig'] },
+    ex: [['Imprimer le test de vocabulaire', '04.12.2026'], ['Saisir les notes du 1er semestre', '24.01.2027']],
+    alias: { tache: ['tache', 'aufgabe', 'task', 'todo'], echeance: ['echeance', 'faellig', 'fallig', 'due', 'date', 'datum', 'bis'] },
+    run(rows) { let n = 0; rows.forEach(r => { if (!r.tache) return; D.todos.push({ id: uid(), text: r.tache, due: parseDate(r.echeance), done: false }); n++; }); return n; }
+  },
+  grades: {
+    cols: { fr: ['classe', 'evaluation', 'date', 'saisie', 'max', 'poids', 'eleve', 'resultat'], de: ['klasse', 'pruefung', 'datum', 'eingabe', 'max', 'gewicht', 'schueler', 'resultat'] },
+    ex: [['10b', 'Test vocabulaire 1', '04.12.2026', 'points', '20', '1', 'Anna', '16'], ['10b', 'Test vocabulaire 1', '04.12.2026', 'points', '20', '1', 'Luca', '12.5'], ['10b', 'Exposé', '11.12.2026', 'note', '', '2', 'Anna', '5']],
+    alias: { classe: ['classe', 'klasse'], evaluation: ['evaluation', 'pruefung', 'prufung', 'test', 'titre', 'titel'], date: ['date', 'datum'], saisie: ['saisie', 'eingabe', 'type', 'typ'], max: ['max', 'pointsmax', 'maxpunkte', 'maximum'], poids: ['poids', 'gewicht', 'weight'], eleve: ['eleve', 'schueler', 'schuler', 'schulerin', 'schuelerin', 'name', 'prenom', 'vorname'], resultat: ['resultat', 'points', 'punkte', 'note', 'result'] },
+    run(rows) {
+      let n = 0;
+      rows.forEach(r => {
+        const c = classByName(r.classe, true); if (!c || !r.evaluation || !r.eleve) return;
+        let s0 = c.students.find(x => x.name.toLowerCase() === r.eleve.toLowerCase()); if (!s0) { s0 = { id: uid(), name: r.eleve }; c.students.push(s0); }
+        const G = D.grades[c.id] = D.grades[c.id] || { evals: [], marks: {} };
+        const type = /^(note|grade)$/.test(normKey(r.saisie)) ? 'grade' : 'points';
+        let ev = G.evals.find(e => e.title === r.evaluation);
+        if (!ev) { ev = { id: uid(), title: r.evaluation, date: parseDate(r.date), type, max: parseFloat(String(r.max).replace(',', '.')) || 0, weight: parseFloat(String(r.poids).replace(',', '.')) || 1 }; G.evals.push(ev); }
+        const v = parseFloat(String(r.resultat).replace(',', '.')); if (isNaN(v)) return;
+        (G.marks[ev.id] = G.marks[ev.id] || {})[s0.id] = v; n++;
+      });
+      A.save(); window.dispatchEvent(new Event('didac-classes')); return n;
+    }
+  },
+  checklist: {
+    cols: { fr: ['section', 'tache'], de: ['abschnitt', 'aufgabe'] },
+    ex: [['préparation', 'Objectifs pédagogiques'], ['pendant', 'Absences'], ['suivi', 'Feedback du cours']],
+    alias: { section: ['section', 'abschnitt', 'phase', 'moment'], tache: ['tache', 'aufgabe', 'task'] },
+    run(rows) {
+      const map = { before: ['preparation', 'avant', 'vorbereitung', 'vor', 'before'], during: ['pendant', 'pendantlecours', 'wahrend', 'waehrend', 'during', 'lektion'], after: ['suivi', 'apres', 'nachbereitung', 'nach', 'after'] };
+      const tpl = { before: [], during: [], after: [] }; let n = 0;
+      rows.forEach(r => { const k = Object.keys(map).find(x => map[x].includes(normKey(r.section))); if (!k || !r.tache) return; tpl[k].push({ id: uid(), text: r.tache }); n++; });
+      if (n) D.checklist.template = tpl; return n;
+    }
+  }
+};
+function csvTemplate(type) {
+  const def = CSV_TYPES[type], lang = A.state.lang === 'de' ? 'de' : 'fr';
+  const rows = [def.cols[lang], ...def.ex];
+  return '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\r\n');
+}
+function aiPrompt(type) {
+  const def = CSV_TYPES[type], lang = A.state.lang === 'de' ? 'de' : 'fr';
+  return T('aiPrompt').replace('{what}', T('csv_' + type)).replace('{cols}', def.cols[lang].join(';')).replace('{rules}', T('csvRules_' + type)).replace('{ex}', [def.cols[lang], ...def.ex].map(r => r.join(';')).join('\n'));
+}
+function csvCard() {
+  return `<div class="card" style="grid-column:1/-1"><h3>${T('csvTitle')}</h3>
+    <p style="margin:0">${T('csvIntro')}</p>
+    <div class="csv-grid">${Object.keys(CSV_TYPES).map(k => `<div class="csv-item"><b>${T('csv_' + k)}</b><span class="lbl-s">${CSV_TYPES[k].cols[A.state.lang === 'de' ? 'de' : 'fr'].join(' ; ')}</span>
+      <div class="row"><button class="btn btn--ghost btn--s" data-csvtpl="${k}">${T('csvTemplate')}</button><button class="btn btn--ghost btn--s" data-csvai="${k}">${T('csvAi')}</button>
+      <label class="btn btn--s">${T('csvImport')}<input type="file" accept=".csv,text/csv,.txt" hidden data-csvimp="${k}"></label></div></div>`).join('')}</div>
+    <div class="note note--tip"><b>${T('tip')}</b> ${T('csvTip')}</div></div>`;
+}
+async function importCSV(type, file) {
+  try {
+    const rows = csvObjects(await file.text(), CSV_TYPES[type].alias);
+    if (!rows.length) throw new Error('empty');
+    if (type === 'checklist' && !(await A.confirmBox(T('csvChecklistQ')))) return;
+    const n = CSV_TYPES[type].run(rows); saveSoon(); render();
+    A.openDlg(`<h2>${T('csv_' + type)}</h2><p>${T('csvDone').replace('{n}', n).replace('{r}', rows.length)}</p><div class="row row--end"><button class="btn" data-act="closeDlg">${T('ok')}</button></div>`);
+  } catch (e) { console.error(e); A.openDlg(`<h2>${T('error')}</h2><p>${T('csvErr')}</p><div class="row row--end"><button class="btn" data-act="closeDlg">${T('ok')}</button></div>`); }
+}
+function bindCSV() {
+  root.addEventListener('change', e => { const k = e.target.dataset.csvimp; if (k && e.target.files[0]) { importCSV(k, e.target.files[0]); e.target.value = ''; } });
+  root.addEventListener('click', e => {
+    const tp = e.target.closest('[data-csvtpl]'); if (tp) { A.download(`modele-${tp.dataset.csvtpl}.csv`.replace('modele', A.state.lang === 'de' ? 'vorlage' : 'modele'), csvTemplate(tp.dataset.csvtpl), 'text/csv;charset=utf-8'); return; }
+    const ai = e.target.closest('[data-csvai]');
+    if (ai) {
+      const txt = aiPrompt(ai.dataset.csvai);
+      A.openDlg(`<h2>${T('csvAi')} · ${T('csv_' + ai.dataset.csvai)}</h2><p class="lbl-s" style="margin:0">${T('csvAiHelp')}</p><textarea class="inp" readonly style="min-height:260px">${esc(txt)}</textarea>
+        <div class="row row--end"><button class="btn btn--ghost" data-act="closeDlg">${T('close')}</button><button class="btn" id="aiCopy">${T('copy')}</button></div>`, body => {
+        $('#aiCopy', body).onclick = async () => { try { await navigator.clipboard.writeText(txt); } catch (err) { const ta = $('textarea', body); ta.select(); document.execCommand('copy'); } $('#aiCopy', body).textContent = T('copied'); };
+      });
+    }
+  });
+}
+
 function bind() {
   bindExtra();
+  bindCSV();
   root.addEventListener('submit', async e => {
     const f = e.target; e.preventDefault();
     const role = f.dataset.role;
@@ -570,8 +879,16 @@ function bind() {
       if (f.pw.value !== f.pw2.value) { msg.innerHTML = `<div class="err">${T('pwMismatch')}</div>`; return; }
       await changePassword(f.pw.value); f.reset(); msg.innerHTML = `<div class="ok">${T('pwChanged')}</div>`;
     }
+    if (role === 'todoform') {
+      D.todos.push({ id: uid(), text: f.text.value.trim(), due: f.due.value, done: false }); saveSoon(); render();
+      const ni = root.querySelector('form[data-role=todoform] input[name=text]'); ni && ni.focus(); return;
+    }
     if (role === 'lessonform') {
       const o = Object.fromEntries(new FormData(f));
+      f.querySelectorAll('[data-rt]').forEach(el => { o[el.dataset.rt] = el.textContent.trim() ? cleanHTML(el.innerHTML) : ''; });
+      const prev = ui.editLesson ? (D.lessons.find(l => l.id === ui.editLesson) || {}).tasks || [] : [];
+      o.tasks = String(o.tasks || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean).map(t => ({ t, d: (prev.find(p => p.t === t) || {}).d || false }));
+      o.color = o.color || '';
       if (ui.editLesson) { Object.assign(D.lessons.find(l => l.id === ui.editLesson), o); ui.editLesson = null; }
       else D.lessons.push({ id: uid(), ...o, classId: o.classId || ui.cls });
       ui.week = mondayOf(o.date); saveSoon(); render();

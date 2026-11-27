@@ -42,3 +42,18 @@ bouton « ← Retour au tableau » dans le bandeau quand l'espace prof est ouver
   horaires, autres), chiffrés AES-256 dans IndexedDB, jamais publiés sur le site. Inclus (chiffrés) dans la sauvegarde.
 - Évènements : import d'un fichier JSON ({ "events": [{ "title", "date": "AAAA-MM-JJTHH:MM", "note" }] }).
   Le fichier des dates Didac 2026/27 est gardé hors du site, dans le dossier privé tableau-classe-prive/.
+
+## v1.3 (27.11.2026) : horaire auto
+Widget « Horaire auto » (facultatif) : enchaîne cours → pause → cours selon l'heure réelle, à partir de
+« Mon emploi du temps » (ou de tous les créneaux Didac), surface bleue pendant les pauses, son au changement.
+
+## v1.4 (27.11.2026) : agenda connecté, import CSV, documents Didac
+- Agenda : couleur par leçon, surlignage (jaune, bleu, vert, orange, rose) et gras dans objectifs/devoirs/remarques,
+  tâches par leçon (à cocher) → envoyées comme planning sur une page (existante ou nouvelle),
+  « Mes tâches » avec échéance → page, recherche dans tout l'agenda (sans accents, résultats surlignés).
+- Réglages › Importer depuis un fichier CSV : classes, leçons, évènements, emploi du temps, tâches, notes, checklist.
+  Modèle CSV téléchargeable (séparateur « ; », UTF-8) et consigne IA prête à copier pour chaque type.
+- Espace prof › Documents › Didac-Dokumente (fichiers publics du site, dossier docs/) : Datenschutz-Merkblatt (DE),
+  modèles Word couleur FR et DE. Source du Merkblatt : tableau-classe-docs/make.py.
+- Police Atkinson Hyperlegible Next hébergée sur le site (fonts/, licence OFL) : aucun appel à un service tiers.
+- Poids au chargement : ~300 Ko (≈ 120 Ko compressés), 9 requêtes, ~0,5 s sur une connexion 10 Mbit/s.
