@@ -526,12 +526,12 @@ function timetable() {
   const head = `<div class="row"><button class="btn btn--ghost btn--s" data-act="ttPrev">←</button>
       <h3 style="flex:1;text-align:center;color:var(--d-rot);margin:0">${T('week')} ${fmtDate(ui.ttWeek, { day: 'numeric', month: 'short' })} – ${fmtDate(addDays(ui.ttWeek, 4), { day: 'numeric', month: 'short', year: 'numeric' })}</h3>
       <button class="btn btn--ghost btn--s" data-act="ttToday">${T('today')}</button><button class="btn btn--ghost btn--s" data-act="ttNext">→</button>
-      <button class="btn btn--ghost btn--s" data-act="ttSlots" aria-pressed="${!!ui.ttEdit}">${T('editSlots')}</button></div>`;
+      <button class="btn btn--ghost btn--s" data-act="ttSlots" aria-pressed="${!!ui.ttEdit}">${ui.ttEdit ? '← ' + T('backToGrid') : T('editSlots')}</button></div>`;
   if (ui.ttEdit) return head + `<form class="card" data-role="slotform"><h3>${T('editSlots')}</h3>
     <table class="tbl" style="width:auto"><thead><tr><th>${T('slotStart')}</th><th>${T('slotEnd')}</th><th>${T('slotBreak')}</th><th></th></tr></thead><tbody>
     ${TTb.slots.map((sl, i) => `<tr><td><input class="inp" type="time" name="s${i}" value="${sl.s}" required></td><td><input class="inp" type="time" name="e${i}" value="${sl.e}" required></td><td class="num"><input type="checkbox" name="b${i}" ${sl.brk ? 'checked' : ''}></td><td><button type="button" class="w-x" data-slotdel="${i}" aria-label="${T('delete')}">×</button></td></tr>`).join('')}
     </tbody></table>
-    <div class="row"><button type="button" class="btn btn--ghost btn--s" data-act="slotAdd">+ ${T('addSlot')}</button><button type="button" class="btn btn--ghost btn--s" data-act="slotReset">${T('slotReset')}</button><span style="flex:1"></span><button class="btn">${T('save')}</button></div>
+    <div class="row"><button type="button" class="btn btn--ghost btn--s" data-act="slotAdd">+ ${T('addSlot')}</button><button type="button" class="btn btn--ghost btn--s" data-act="slotReset">${T('slotReset')}</button><span style="flex:1"></span><button type="button" class="btn btn--ghost" data-act="ttSlots">${T('cancel')}</button><button class="btn">${T('save')}</button></div>
     <p class="lbl-s" style="margin:0">${T('slotsNote')}</p></form>`;
   return head + `<div class="note note--tip"><b>${T('tip')}</b> ${T('ttHint')}</div>
   <div class="tt-wrap"><table class="tt"><thead><tr><th></th>${DAYS.map(d => { const date = addDays(ui.ttWeek, d - 1); return `<th class="${date === today ? 'is-today' : ''}">${cap(fmtDate(date, { weekday: 'long' }))}<br><span class="lbl-s">${fmtDate(date, { day: 'numeric', month: 'short' })}</span></th>`; }).join('')}</tr></thead><tbody>
