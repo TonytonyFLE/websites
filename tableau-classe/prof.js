@@ -28,7 +28,17 @@ async function persist() {
   const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(JSON.stringify(D)));
   LS.set(VKEY, { v: 1, kdf: 'PBKDF2-SHA256', iter, salt: b64(salt), iv: b64(iv), ct: b64(ct), saved: new Date().toISOString() });
 }
-function saveSoon() { clearTimeout(saveT); saveT = setTimeout(persist, 400); }
+// Copie non sensible de l'emploi du temps (créneaux, matière, classe, salle) pour l'horaire auto du tableau,
+// qui doit marcher sans mot de passe. Aucune donnée d'élève.
+function mirrorSchedule() {
+  if (!D || !D.timetable) return;
+  const cells = {};
+  Object.entries(D.timetable.cells).forEach(([k, c]) => { cells[k] = { subject: c.subject || '', cls: (A.classById(c.classId) || {}).name || '', room: c.room || '', color: c.color || '' }; });
+  const next = { slots: D.timetable.slots, cells }, S = A.state;
+  if (JSON.stringify(S.schedule) === JSON.stringify(next)) return;
+  S.schedule = next; A.save(); window.dispatchEvent(new Event('didac-schedule'));
+}
+function saveSoon() { clearTimeout(saveT); saveT = setTimeout(() => { persist(); mirrorSchedule(); }, 400); }
 async function unlock(pw) {
   const v = LS.get(VKEY, null); if (!v) return false;
   try {

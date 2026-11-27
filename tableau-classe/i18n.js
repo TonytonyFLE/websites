@@ -1,6 +1,7 @@
 /* Textes FR / DE du tableau de classe Didac. Espace insécable ( ) avant « : ; ? ! » en français. */
 window.DIDAC_I18N = {
 fr: {
+  w_schedule: 'Horaire auto', pauseLbl: 'Pause', nextUp: 'Ensuite\u00A0:', noLessonToday: 'Pas de cours aujourd\u2019hui', dayOver: 'Fin des cours pour aujourd\u2019hui', beforeFirst: 'Début des cours dans', schMine: 'Mes cours (emploi du temps)', schAll: 'Tous les créneaux Didac', sound: 'Son', schHint: 'Remplis ton emploi du temps dans l\u2019espace prof pour suivre tes propres cours. Sinon, choisis «\u00A0Tous les créneaux Didac\u00A0».',
   p_timetable: 'Emploi du temps', p_documents: 'Documents', newTab: 'Nouvel onglet', download: 'Télécharger',
   addDoc: 'Ajouter un document PDF', docFile: 'Fichier PDF', docCat: 'Catégorie', docSubject: 'Matière', docSubjectPh: 'Français, FrE…', docTitle: 'Titre affiché', docTitlePh: 'Plan de semestre 1',
   dc_termine: 'Dates importantes', dc_ferien: 'Plans de vacances', dc_semester: 'Plans de semestre', dc_stundenplan: 'Horaires de l’école', dc_other: 'Autres documents',
@@ -76,6 +77,7 @@ fr: {
   dangerZone: 'Tout effacer', wipeText: 'Supprime l’espace prof de ce navigateur (agenda, absences, notes, checklist). Les classes et les pages restent.', wipe: 'Effacer l’espace prof', wipeQ: 'Effacer définitivement l’espace prof de ce navigateur ?'
 },
 de: {
+  w_schedule: 'Auto-Stundenplan', pauseLbl: 'Pause', nextUp: 'Danach:', noLessonToday: 'Heute kein Unterricht', dayOver: 'Unterricht für heute beendet', beforeFirst: 'Unterricht beginnt in', schMine: 'Meine Lektionen (Stundenplan)', schAll: 'Alle Didac-Zeitfenster', sound: 'Ton', schHint: 'Fülle deinen Stundenplan im Lehrpersonen-Bereich aus, um deinen eigenen Lektionen zu folgen. Sonst wähle «Alle Didac-Zeitfenster».',
   p_timetable: 'Stundenplan', p_documents: 'Dokumente', newTab: 'Neuer Tab', download: 'Herunterladen',
   addDoc: 'PDF-Dokument hinzufügen', docFile: 'PDF-Datei', docCat: 'Kategorie', docSubject: 'Fach', docSubjectPh: 'Französisch, FrE …', docTitle: 'Angezeigter Titel', docTitlePh: 'Semesterplan 1',
   dc_termine: 'Wichtige Termine', dc_ferien: 'Ferienpläne', dc_semester: 'Semesterpläne', dc_stundenplan: 'Stundenpläne der Schule', dc_other: 'Weitere Dokumente',

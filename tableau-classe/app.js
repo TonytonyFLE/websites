@@ -101,6 +101,8 @@ const fmtHMS = (sec, forceH) => {
   return (hh || forceH) ? `${hh}:${pad(mm)}:${pad(ss)}` : `${pad(mm)}:${pad(ss)}`;
 };
 
+// Créneaux Didac Bern (LA_Stundenplan SJ 2026/27) : base de l'horaire auto si aucun emploi du temps
+const DIDAC_SLOTS = [['08:40', '09:20'], ['09:25', '10:05'], ['10:20', '11:00'], ['11:05', '11:45'], ['11:50', '12:30'], ['12:35', '13:30', 1], ['13:30', '14:10'], ['14:20', '15:00'], ['15:05', '15:45'], ['15:50', '16:30'], ['16:40', '17:20']].map(([s, e, brk]) => ({ s, e, brk: !!brk }));
 const WIDGETS = {
   /* ----- Horloge ----- */
   clock: {
@@ -203,6 +205,69 @@ const WIDGETS = {
       });
       if (st.endAt === null && st.remaining <= 0 && st.dur > 0) ctx.el.classList.add('is-done');
       renderMain(); upd(); tickers.add(upd); return () => tickers.delete(upd);
+    }
+  },
+
+  /* ----- Horaire auto : enchaînement cours → pause → cours, calé sur l'heure ----- */
+  schedule: {
+    icon: 'arrow-roadmap', w: 460, h: 380, compact: true, init: () => ({ mode: 'mine', sound: true, compact: false }),
+    mount(b, wd, ctx) {
+      const st = wd.state; let lastKey = null;
+      const toMin = hm => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
+      const fmtT = sec => fmtHMS(Math.max(0, Math.ceil(sec)), sec >= 3600);
+      function segments(now) {
+        const sched = S.schedule || { slots: DIDAC_SLOTS, cells: {} };
+        const day = now.getDay(); if (day < 1 || day > 5) return [];
+        const hasMine = Object.keys(sched.cells || {}).some(k => k.startsWith(day + '-'));
+        const mode = st.mode === 'mine' && Object.keys(sched.cells || {}).length ? 'mine' : 'all';
+        if (mode === 'mine' && !hasMine) return [];
+        const L = sched.slots.map((sl, i) => ({ sl, i })).filter(({ sl, i }) => !sl.brk && (mode === 'all' || sched.cells[day + '-' + i]))
+          .map(({ sl, i }) => { const c = (sched.cells || {})[day + '-' + i]; return { type: 'lesson', s: toMin(sl.s), e: toMin(sl.e), label: c ? [c.subject, c.cls].filter(Boolean).join(' · ') || T('lesson') : T('lesson'), room: c && c.room, color: c && c.color }; });
+        const out = [];
+        L.forEach((seg, k) => {
+          out.push(seg); const nx = L[k + 1];
+          if (nx && nx.s > seg.e) {
+            const lunch = sched.slots.some(sl => sl.brk && toMin(sl.s) < nx.s && toMin(sl.e) > seg.e);
+            out.push({ type: 'pause', s: seg.e, e: nx.s, label: lunch ? T('lunch') : T('pauseLbl') });
+          }
+        });
+        return out;
+      }
+      const hhmm = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+      function upd() {
+        const now = new Date(); const nowM = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+        const segs = segments(now);
+        let cur = segs.findIndex(sg => nowM >= sg.s && nowM < sg.e), state;
+        if (!segs.length) state = 'none'; else if (cur >= 0) state = 'run'; else if (nowM < segs[0].s) state = 'before'; else state = 'after';
+        const seg = cur >= 0 ? segs[cur] : null, next = state === 'before' ? segs[0] : (cur >= 0 ? segs[cur + 1] : null);
+        const key = state + ':' + cur;
+        if (lastKey !== null && key !== lastKey && st.sound && (state === 'run' || state === 'after')) beep(seg && seg.type === 'pause' ? 2 : 3);
+        const changed = key !== lastKey; lastKey = key;
+        ctx.el.classList.toggle('is-pause', !!(seg && seg.type === 'pause') || state === 'before');
+        const left = seg ? (seg.e - nowM) * 60 : state === 'before' ? (segs[0].s - nowM) * 60 : 0;
+        const pct = seg ? Math.min(100, (seg.e - nowM) / (seg.e - seg.s) * 100) : 0;
+        if (changed || !$('.sch-main', b)) {
+          const title = state === 'none' ? T('noLessonToday') : state === 'after' ? T('dayOver') : state === 'before' ? T('beforeFirst') : seg.label;
+          b.innerHTML = `<div class="timer-row"><svg class="timer-ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="42" fill="none" stroke="#DADADA" stroke-width="10"/><circle class="ring" cx="50" cy="50" r="42" fill="none" stroke="#88004A" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 50 50)"/></svg>
+            <div class="big sch-main"><div><div class="sch-kind">${seg ? (seg.type === 'pause' ? T('pauseLbl') : T('lesson')) + ` · ${hhmm(seg.s)}–${hhmm(seg.e)}` : ''}</div><div class="sch-title">${esc(title)}</div>
+              ${state === 'run' || state === 'before' ? `<div class="digits sch-left"></div>` : ''}
+              ${next ? `<div class="sch-next">${T('nextUp')} ${esc(next.type === 'pause' ? next.label : next.label)} · ${hhmm(next.s)}${next.room ? ' · ' + T('room') + ' ' + esc(next.room) : ''}</div>` : ''}</div></div></div>
+            <ol class="sch-list full-only">${segs.map((sg, k) => `<li class="${k === cur ? 'is-cur' : ''} ${sg.type === 'pause' ? 'is-p' : ''} ${sg.e <= nowM ? 'is-past' : ''}"><span>${hhmm(sg.s)}–${hhmm(sg.e)}</span><span>${esc(sg.label)}</span></li>`).join('')}</ol>
+            <div class="ctl full-only"><select class="inp" data-role="mode" aria-label="${T('display')}"><option value="mine" ${st.mode === 'mine' ? 'selected' : ''}>${T('schMine')}</option><option value="all" ${st.mode === 'all' ? 'selected' : ''}>${T('schAll')}</option></select>
+              <label class="chk"><input type="checkbox" data-role="sound" ${st.sound ? 'checked' : ''}> ${T('sound')}</label></div>
+            ${st.mode === 'mine' && !Object.keys((S.schedule || {}).cells || {}).length ? `<div class="hint full-only">${T('schHint')}</div>` : ''}`;
+        }
+        const lf = $('.sch-left', b); if (lf) lf.textContent = fmtT(left);
+        const ring = $('.ring', b); if (ring) ring.setAttribute('stroke-dasharray', `${pct} 100`);
+      }
+      b.addEventListener('change', e => {
+        if (e.target.dataset.role === 'mode') { st.mode = e.target.value; lastKey = null; save(); b.innerHTML = ''; upd(); }
+        if (e.target.dataset.role === 'sound') { st.sound = e.target.checked; save(); }
+      });
+      const onSched = () => { b.innerHTML = ''; lastKey = null; upd(); };
+      window.addEventListener('didac-schedule', onSched);
+      upd(); tickers.add(upd);
+      return () => { tickers.delete(upd); window.removeEventListener('didac-schedule', onSched); };
     }
   },
 
@@ -673,7 +738,7 @@ const WIDGETS = {
     }
   }
 };
-const ORDER = ['clock', 'timer', 'stopwatch', 'random', 'groups', 'dice', 'countdown', 'plan', 'text', 'sticker', 'image', 'calc', 'draw'];
+const ORDER = ['clock', 'timer', 'schedule', 'stopwatch', 'random', 'groups', 'dice', 'countdown', 'plan', 'text', 'sticker', 'image', 'calc', 'draw'];
 
 /* ---------- Choix d'une icône Didac (planning, stickers) ---------- */
 function iconPicker(current, onPick) {

@@ -393,3 +393,20 @@ body.prof-open .dock > * { visibility: hidden; }
 .pinbar .lbl-s { color: var(--d-noir); font-weight: 700; }
 .pinbar .btn--ghost { border-color: var(--d-noir); color: var(--d-noir); }
 a.btn { text-decoration: none; }
+
+/* ---------- v1.3 : horaire auto ---------- */
+.w.is-pause .w-body { background: var(--d-blau); }
+.w.is-pause .timer-ring circle:first-child { stroke: #fff; }
+.w.is-pause .sch-list li { background: var(--d-blanc); }
+.sch-kind { font-size: clamp(12px, 4cqmin, 22px); font-weight: 400; color: var(--d-gris4); }
+.w.is-pause .sch-kind { color: var(--d-noir); }
+.sch-title { font-weight: 700; font-size: clamp(16px, 8cqmin, 48px); color: var(--d-rot); line-height: 1.1; }
+.w.is-pause .sch-title { color: var(--d-noir); }
+.sch-left { font-size: clamp(26px, min(20cqh, 16cqw), 180px); margin-top: .1em; }
+.w.is-compact .sch-left { font-size: clamp(26px, min(36cqh, 20cqw), 220px); }
+.sch-next { font-size: clamp(12px, 4cqmin, 22px); font-weight: 400; margin-top: .3em; }
+.sch-list { list-style: none; margin: 0; padding: 0 10px 6px; display: grid; gap: 3px; max-height: 32cqh; overflow: auto; font-size: 13px; font-variant-numeric: tabular-nums; }
+.sch-list li { display: flex; gap: 10px; padding: 3px 8px; border-radius: 6px; border-left: 4px solid transparent; font-weight: 400; }
+.sch-list li.is-p { color: var(--d-gris4); }
+.sch-list li.is-past { text-decoration: line-through; color: var(--d-gris4); }
+.sch-list li.is-cur { border-left-color: var(--d-rot); background: var(--d-gris1); font-weight: 700; color: var(--d-noir); text-decoration: none; }
