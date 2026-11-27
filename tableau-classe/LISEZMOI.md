@@ -96,3 +96,8 @@ Dates au format en-GB / it-CH. Import CSV : colonnes, modèles et valeurs (jours
 ## v1.8.1 (27.11.2026) : horaire auto « Créneaux choisis »
 Troisième mode de l'Horaire auto : on clique sur les créneaux Didac voulus (sans remplir l'emploi du temps),
 pauses calculées automatiquement, fonctionne tous les jours. Choix gardé dans le widget (state.picked).
+
+## v1.9.0 (27.11.2026)
+- Pages dans un volet à gauche, masquable (bouton « Pages » en haut à gauche ou «) : épinglées ★ puis autres pages (récentes d'abord), filtre rapide, + page, catalogue. Le choix est mémorisé. Sur téléphone, le volet s'ouvre par-dessus le tableau.
+- Langue déplacée en bas du volet : le bandeau du haut ne garde que logo, claim, Classes, Espace prof, Plein écran.
+- Dé : points visibles avec plusieurs dés (marge intérieure proportionnelle), taille selon le nombre ; pièce : texte centré.

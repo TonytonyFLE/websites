@@ -50,6 +50,7 @@ function applyStatic() {
   $('#btnFull').innerHTML = `<span class="lbl">${document.fullscreenElement ? T('exitFull') : T('fullscreen')}</span>`;
   $('#btnFull').title = T('fullscreen');
   if ($('#dockShow')) applyDock();
+  applySide();
 }
 
 /* ---------- Classes (partagées avec l'espace prof) ---------- */
@@ -1046,18 +1047,39 @@ function newPage(name) {
 }
 function tabVisible(p, i) { return isPinned(p) || i === S.current || (S.recent || []).includes(p.id); }
 const CAT_SVG = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="currentColor"><rect x="1" y="1" width="7.5" height="7.5" rx="1.5"/><rect x="11.5" y="1" width="7.5" height="7.5" rx="1.5"/><rect x="1" y="11.5" width="7.5" height="7.5" rx="1.5"/><rect x="11.5" y="11.5" width="7.5" height="7.5" rx="1.5"/></svg>';
+const SIDE_SVG = '<svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="2" y="3" width="16" height="14" rx="2.5"/><path d="M7.5 3v14"/></svg>';
+/* volet des pages à gauche : épinglées (ordre des pages) puis les autres (ouvertes récemment), filtre rapide */
 function renderTabs() {
-  const tabs = $('#tabs');
-  tabs.innerHTML = `<button class="tab tab--cat" data-act="catalog" title="${T('allPages')}" aria-label="${T('allPages')}">${CAT_SVG}<span>${S.pages.length}</span></button>`
-    + S.pages.map((p, i) => tabVisible(p, i) ? `<button class="tab ${isPinned(p) ? '' : 'tab--tmp'}" role="tab" aria-selected="${i === S.current}" data-i="${i}" title="${T('tabHint')}">${esc(pageName(p, i))}</button>` : '').join('')
-    + `<button class="tab tab--add" data-act="addPage" title="${T('addPage')}" aria-label="${T('addPage')}">+</button>`;
-  const cur = tabs.querySelector('[aria-selected=true]'); if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  const tabs = $('#tabs'), qIn = $('#sideQ');
+  const words = fold(qIn.value).split(/\s+/).filter(Boolean);
+  const match = (p, i) => { if (!words.length) return true; const t = pageText(p) + ' ' + fold(pageName(p, i)); return words.every(w => t.includes(w)); };
+  const all = S.pages.map((p, i) => ({ p, i })).filter(({ p, i }) => match(p, i));
+  const pin = all.filter(({ p }) => isPinned(p)), other = all.filter(({ p }) => !isPinned(p)).sort((a, b) => (b.p.opened || 0) - (a.p.opened || 0));
+  const row = ({ p, i }) => `<div class="side-row"><button class="tab ${isPinned(p) ? '' : 'tab--tmp'}" aria-current="${i === S.current ? 'page' : 'false'}" data-i="${i}" title="${T('tabHint')}">${esc(pageName(p, i))}</button>`
+    + `<button class="side-pin" data-pin="${i}" aria-pressed="${isPinned(p)}" title="${isPinned(p) ? T('unpinTab') : T('pinTab')}" aria-label="${isPinned(p) ? T('unpinTab') : T('pinTab')} : ${esc(pageName(p, i))}">${isPinned(p) ? '★' : '☆'}</button></div>`;
+  tabs.innerHTML = (pin.length ? `<h3 class="side-h">${T('pinnedPages')}</h3>${pin.map(row).join('')}` : '')
+    + (other.length ? `<h3 class="side-h">${T('otherPages')}</h3>${other.map(row).join('')}` : '')
+    + (all.length ? '' : `<p class="lbl-s side-none">${T('noPageFound')}</p>`);
+  $('#sideTitle').textContent = `${T('pagesTitle')} (${S.pages.length})`;
+  const cur = tabs.querySelector('[aria-current=page]'); if (cur) cur.scrollIntoView({ block: 'nearest' });
 }
-$('#tabs').addEventListener('click', e => {
+function applySide() {
+  document.body.classList.toggle('side-hidden', !!S.sideHidden);
+  const b = $('#btnSide'); b.innerHTML = `${SIDE_SVG}<span class="lbl">${T('pagesTitle')}</span>`; b.title = T('toggleSide'); b.setAttribute('aria-expanded', String(!S.sideHidden));
+  $('#sideHide').innerHTML = '«'; $('#sideHide').title = T('hideSide'); $('#sideHide').setAttribute('aria-label', T('hideSide'));
+  $('#sideAdd').textContent = '+ ' + T('addPage'); $('#sideCat').innerHTML = `${CAT_SVG}<span>${T('allPages')}</span>`;
+  $('#sideQ').placeholder = T('filterPages'); $('#sideQ').setAttribute('aria-label', T('filterPages')); $('#side').setAttribute('aria-label', T('pagesTitle'));
+}
+function setSide(hidden) { S.sideHidden = hidden; save(); applySide(); window.dispatchEvent(new Event('resize')); }
+$('#btnSide').onclick = () => setSide(!S.sideHidden);
+$('#sideHide').onclick = () => setSide(true);
+$('#sideQ').addEventListener('input', () => renderTabs());
+$('#side').addEventListener('click', e => {
   const t = e.target.closest('[data-i]');
-  if (t) { const i = +t.dataset.i; if (i === S.current) pageMenu(i); else { S.current = i; save(); renderBoard(); renderTabs(); } return; }
+  if (t) { const i = +t.dataset.i; if (i === S.current) pageMenu(i); else { S.current = i; save(); renderBoard(); renderTabs(); if (matchMedia('(max-width: 760px)').matches) setSide(true); } return; }
+  const pn = e.target.closest('[data-pin]'); if (pn) { const p = S.pages[+pn.dataset.pin]; p.pinned = !isPinned(p); save(); renderTabs(); return; }
   if (e.target.closest('[data-act=catalog]')) { openCatalog(); return; }
-  if (e.target.closest('[data-act=addPage]')) { newPage(); S.current = S.pages.length - 1; save(); renderBoard(); renderTabs(); }
+  if (e.target.closest('[data-act=addPage]')) { newPage(); S.current = S.pages.length - 1; $('#sideQ').value = ''; save(); renderBoard(); renderTabs(); }
 });
 const fold = x => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 function pageText(p) {
@@ -1461,6 +1483,7 @@ window.DidacApp = {
   goPage(id) { const i = S.pages.findIndex(p => p.id === id); if (i < 0) return; S.current = i; save(); renderTabs(); renderBoard(); }
 };
 
+if (S.sideHidden === undefined && matchMedia('(max-width: 760px)').matches) S.sideHidden = true;
 applyStatic(); renderTabs(); renderBoard(); applyDock();
 setTimeout(checkBackup, 4000);
 $('#emptyTpl').addEventListener('click', openTemplates);
