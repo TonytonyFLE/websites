@@ -52,12 +52,19 @@ function normalize(d) {
   d.absences = d.absences || {};
   d.grades = d.grades || {};
   d.checklist = d.checklist || { template: defaultTemplate(), done: {} };
+  d.checklist.template = migrateTemplate(d.checklist.template);
   d.settings = d.settings || { rounding: 0.5 };
   return d;
 }
 function defaultTemplate() {
-  const mk = (sec, n) => Array.from({ length: n }, (_, i) => ({ id: `${sec}${i + 1}`, key: `cl_${sec}${i + 1}` }));
-  return { before: mk('b', 5), during: mk('d', 5), after: mk('a', 5) };
+  const mk = (sec, n) => Array.from({ length: n }, (_, i) => ({ id: `s${sec}${i + 1}`, key: `cls_${sec}${i + 1}` }));
+  return { before: mk('b', 6), during: mk('d', 5), after: mk('a', 3) };
+}
+// Ancienne checklist standard (v1) jamais personnalisée → nouvelle checklist standard de Tony
+function migrateTemplate(t) {
+  const fresh = defaultTemplate();
+  ['before', 'during', 'after'].forEach(k => { if (t[k] && t[k].length && t[k].every(it => it.key && it.key.startsWith('cl_') && it.text === undefined)) t[k] = fresh[k]; });
+  return t;
 }
 function bumpIdle() { clearTimeout(idleT); if (key) idleT = setTimeout(lock, IDLE_MIN * 60000); }
 ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, bumpIdle, { passive: true }));
@@ -268,7 +275,7 @@ function checklist() {
     <button class="btn btn--ghost btn--s" data-act="clToday">${T('today')}</button><span style="flex:1"></span>
     <button class="btn ${ui.clEdit ? '' : 'btn--ghost'}" data-act="clEdit">${ui.clEdit ? T('doneEditing') : T('customize')}</button></div>
   ${ui.clEdit ? `<div class="note note--tip"><b>${T('tip')}</b> ${T('clEditHint')}</div>` : `<div class="card" style="gap:6px"><div class="row"><b style="font-weight:700">${pct} %</b><span class="lbl-s">${T('clProgress')}</span></div><div class="progress"><i style="width:${pct}%"></i></div></div>`}
-  <div class="grid3">${SECS.map(([s, c]) => `<div class="cl-col ${c}"><h4>${T('cl_' + s)}</h4>
+  <div class="grid3">${SECS.map(([s, c]) => `<div class="cl-col ${c}"><h4>${T('cl_' + s)} (${tpl[s].length})</h4>
     ${tpl[s].map(it => ui.clEdit
       ? `<div class="cl-item"><input class="inp" data-cltxt="${s}|${it.id}" value="${esc(itemText(it))}" aria-label="${T('task')}"><button class="w-x" data-clup="${s}|${it.id}" title="↑" aria-label="↑">↑</button><button class="w-x" data-cldel="${s}|${it.id}" title="${T('delete')}" aria-label="${T('delete')}">×</button></div>`
       : `<label class="cl-item ${done.includes(it.id) ? 'is-done' : ''}"><input type="checkbox" data-clchk="${it.id}" ${done.includes(it.id) ? 'checked' : ''}><span>${esc(itemText(it))}</span></label>`).join('')}
