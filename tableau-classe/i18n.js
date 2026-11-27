@@ -1,6 +1,16 @@
 /* Textes FR / DE du tableau de classe Didac. Espace insécable ( ) avant « : ; ? ! » en français. */
 window.DIDAC_I18N = {
 fr: {
+  p_timetable: 'Emploi du temps', p_documents: 'Documents', newTab: 'Nouvel onglet', download: 'Télécharger',
+  addDoc: 'Ajouter un document PDF', docFile: 'Fichier PDF', docCat: 'Catégorie', docSubject: 'Matière', docSubjectPh: 'Français, FrE…', docTitle: 'Titre affiché', docTitlePh: 'Plan de semestre 1',
+  dc_termine: 'Dates importantes', dc_ferien: 'Plans de vacances', dc_semester: 'Plans de semestre', dc_stundenplan: 'Horaires de l’école', dc_other: 'Autres documents',
+  docPrivacy: 'Les PDF restent sur cet ordinateur, chiffrés avec ton mot de passe. Ils ne sont jamais publiés sur le site et voyagent chiffrés dans ta sauvegarde.',
+  noDoc: 'Aucun document.', importantDocs: 'Documents importants :', docErr: 'Impossible d’ouvrir ce document.', delDocQ: 'Supprimer le document « {d} » ?',
+  editSlots: 'Horaires', slotStart: 'Début', slotEnd: 'Fin', slotBreak: 'Pause', addSlot: 'Créneau', slotReset: 'Horaires Didac Bern', slotResetQ: 'Remettre les horaires Didac Bern (08:40 à 17:20) ?',
+  slotsNote: 'Les cases de ton emploi du temps restent liées à la ligne du créneau.', ttHint: 'Clique sur une case pour y mettre ton cours : matière, classe, salle, couleur et page du tableau à ouvrir. Clique sur un cours pour ouvrir sa page ou sa leçon dans l’agenda.',
+  lunch: 'Pause de midi', ttAdd: 'Ajouter un cours', room: 'Salle', ttSubject: 'Matière / cours', ttSubjectPh: 'FrE, ÜFK, Maths…', linkedPage: 'Page du tableau liée', color: 'Couleur', ttRepeat: 'Remplir aussi les autres créneaux vides de ce jour',
+  openPage: 'Ouvrir la page', lessonOf: 'Leçon du', fillWeek: 'Remplir la semaine depuis l’emploi du temps', weekFilled: '{n} leçon(s) ajoutée(s) à cette semaine.', weekFilledNone: 'Rien à ajouter : ton emploi du temps est vide ou les leçons existent déjà.',
+  eventsImported: '{n} évènement(s) importé(s).', eventsImportErr: 'Ce fichier ne contient pas d’évènements lisibles.', hidePast: 'Masquer les évènements passés', showPast: 'Afficher les {n} évènement(s) passé(s)', importEvents: 'Importer (fichier)',
   pointsCol: 'Points', gradeCol: 'Note', lightView: 'Allégé', fullView: 'Complet', clickToStart: 'Clique pour démarrer ou mettre en pause', dragHint: 'Glisse un nom vers un autre groupe pour le changer de groupe.',
   diceType: 'Type de dé', coin: 'Pièce', dieShort: 'D', heads: 'Pile', tails: 'Face', flip: 'Lancer la pièce',
   fromAgenda: 'Évènement de l’espace prof', manualEvent: 'Autre (saisir ci-dessous)', eventsTip: 'Astuce : planifie tes évènements dans Espace prof › Agenda pour les choisir ici.', eventGone: 'Cet évènement a été supprimé. Clique sur « Modifier ».',
@@ -66,6 +76,16 @@ fr: {
   dangerZone: 'Tout effacer', wipeText: 'Supprime l’espace prof de ce navigateur (agenda, absences, notes, checklist). Les classes et les pages restent.', wipe: 'Effacer l’espace prof', wipeQ: 'Effacer définitivement l’espace prof de ce navigateur ?'
 },
 de: {
+  p_timetable: 'Stundenplan', p_documents: 'Dokumente', newTab: 'Neuer Tab', download: 'Herunterladen',
+  addDoc: 'PDF-Dokument hinzufügen', docFile: 'PDF-Datei', docCat: 'Kategorie', docSubject: 'Fach', docSubjectPh: 'Französisch, FrE …', docTitle: 'Angezeigter Titel', docTitlePh: 'Semesterplan 1',
+  dc_termine: 'Wichtige Termine', dc_ferien: 'Ferienpläne', dc_semester: 'Semesterpläne', dc_stundenplan: 'Stundenpläne der Schule', dc_other: 'Weitere Dokumente',
+  docPrivacy: 'Die PDFs bleiben verschlüsselt auf diesem Computer. Sie werden nie auf der Website veröffentlicht und sind in deiner Sicherung verschlüsselt enthalten.',
+  noDoc: 'Kein Dokument.', importantDocs: 'Wichtige Dokumente:', docErr: 'Dieses Dokument kann nicht geöffnet werden.', delDocQ: 'Dokument «{d}» löschen?',
+  editSlots: 'Zeiten', slotStart: 'Beginn', slotEnd: 'Ende', slotBreak: 'Pause', addSlot: 'Zeitfenster', slotReset: 'Zeiten Didac Bern', slotResetQ: 'Die Zeiten von Didac Bern (08:40 bis 17:20) wiederherstellen?',
+  slotsNote: 'Die Felder deines Stundenplans bleiben mit der Zeile des Zeitfensters verbunden.', ttHint: 'Klicke auf ein Feld, um deinen Unterricht einzutragen: Fach, Klasse, Zimmer, Farbe und Bildschirmseite. Klicke auf eine Lektion, um ihre Seite oder ihre Agenda-Lektion zu öffnen.',
+  lunch: 'Mittagspause', ttAdd: 'Lektion hinzufügen', room: 'Zimmer', ttSubject: 'Fach / Kurs', ttSubjectPh: 'FrE, ÜFK, Mathe …', linkedPage: 'Verknüpfte Bildschirmseite', color: 'Farbe', ttRepeat: 'Auch die anderen leeren Zeitfenster dieses Tages füllen',
+  openPage: 'Seite öffnen', lessonOf: 'Lektion vom', fillWeek: 'Woche aus dem Stundenplan füllen', weekFilled: '{n} Lektion(en) zu dieser Woche hinzugefügt.', weekFilledNone: 'Nichts hinzuzufügen: Dein Stundenplan ist leer oder die Lektionen existieren schon.',
+  eventsImported: '{n} Ereignis(se) importiert.', eventsImportErr: 'Diese Datei enthält keine lesbaren Ereignisse.', hidePast: 'Vergangene Ereignisse ausblenden', showPast: '{n} vergangene(s) Ereignis(se) anzeigen', importEvents: 'Importieren (Datei)',
   pointsCol: 'Punkte', gradeCol: 'Note', lightView: 'Schlank', fullView: 'Komplett', clickToStart: 'Klicke zum Starten oder Pausieren', dragHint: 'Ziehe einen Namen in eine andere Gruppe, um ihn zu verschieben.',
   diceType: 'Würfeltyp', coin: 'Münze', dieShort: 'W', heads: 'Kopf', tails: 'Zahl', flip: 'Münze werfen',
   fromAgenda: 'Ereignis aus dem Lehrpersonen-Bereich', manualEvent: 'Anderes (unten eingeben)', eventsTip: 'Tipp: Plane deine Ereignisse im Lehrpersonen-Bereich › Agenda, dann kannst du sie hier wählen.', eventGone: 'Dieses Ereignis wurde gelöscht. Klicke auf «Bearbeiten».',

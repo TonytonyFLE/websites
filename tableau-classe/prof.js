@@ -14,7 +14,7 @@ const IDLE_MIN = 20;
 
 /* ---------- Chiffrement ---------- */
 const enc = new TextEncoder(), dec = new TextDecoder();
-const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const b64 = buf => { const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 async function deriveKey(pw, salt, iter) {
   const base = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveKey']);
@@ -43,10 +43,12 @@ async function createVault(pw) {
   key = await deriveKey(pw, salt, iter); D = normalize({}); await persist();
 }
 async function changePassword(pw) {
-  salt = crypto.getRandomValues(new Uint8Array(16));
-  key = await deriveKey(pw, salt, iter); await persist();
+  const newSalt = crypto.getRandomValues(new Uint8Array(16));
+  const newKey = await deriveKey(pw, newSalt, iter);
+  await reencryptDocs(key, newKey);
+  salt = newSalt; key = newKey; await persist();
 }
-function lock() { clearTimeout(saveT); if (key && D) persist(); key = null; D = null; render(); }
+function lock() { clearTimeout(saveT); if (key && D) persist(); key = null; D = null; if (ui.docURL) { URL.revokeObjectURL(ui.docURL); ui.docURL = null; ui.docView = null; } render(); }
 function normalize(d) {
   d.lessons = d.lessons || [];
   d.absences = d.absences || {};
@@ -54,6 +56,8 @@ function normalize(d) {
   d.checklist = d.checklist || { template: defaultTemplate(), done: {} };
   d.checklist.template = migrateTemplate(d.checklist.template);
   d.settings = d.settings || { rounding: 0.5 };
+  d.docs = d.docs || [];
+  d.timetable = d.timetable || { slots: DIDAC_SLOTS.map(x => ({ ...x })), cells: {} };
   return d;
 }
 function defaultTemplate() {
@@ -87,7 +91,7 @@ function render() {
   const S = A.state;
   if (!ui.cls || !A.classById(ui.cls)) ui.cls = S.classes[0] ? S.classes[0].id : null;
   if (!key) { root.innerHTML = lockScreen(); const i = root.querySelector('input'); i && i.focus(); return; }
-  const tabs = [['agenda', 'blank-calendar'], ['absences', 'user-single-neutral-male'], ['grades', 'trophy'], ['checklist', 'check-square'], ['settings', 'information-circle']];
+  const tabs = [['timetable', 'class-lesson'], ['agenda', 'blank-calendar'], ['absences', 'user-single-neutral-male'], ['grades', 'trophy'], ['checklist', 'check-square'], ['documents', 'book-reading'], ['settings', 'information-circle']];
   root.innerHTML = `<div class="prof-head"><h2>${T('profSpace')}</h2>
       <div class="ptabs" role="group">${tabs.map(([k, ic]) => `<button data-tab="${k}" aria-pressed="${tab === k}">${tab === k ? ICON(ic, 'blanc') : ICON(ic)}${T('p_' + k)}</button>`).join('')}</div>
       <span class="sp"></span>
@@ -101,6 +105,8 @@ function body() {
     case 'absences': return absences();
     case 'grades': return grades();
     case 'checklist': return checklist();
+    case 'timetable': return timetable();
+    case 'documents': return documents();
     default: return settings();
   }
 }
@@ -136,12 +142,13 @@ function agenda() {
   ui.week = ui.week || mondayOf(todayISO());
   const end = addDays(ui.week, 6);
   const cls = A.classById(ui.cls);
-  const L = D.lessons.filter(l => l.date >= ui.week && l.date <= end && (!ui.filterAll ? l.classId === ui.cls : true)).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const L = D.lessons.filter(l => l.date >= ui.week && l.date <= end && (ui.filterAll || !l.classId || l.classId === ui.cls)).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const ed = ui.editLesson ? D.lessons.find(l => l.id === ui.editLesson) : null;
-  const hw = D.lessons.filter(l => l.homework && l.date >= addDays(todayISO(), -14) && (ui.filterAll || l.classId === ui.cls)).sort((a, b) => a.date.localeCompare(b.date));
+  const hw = D.lessons.filter(l => l.homework && l.date >= addDays(todayISO(), -14) && (ui.filterAll || !l.classId || l.classId === ui.cls)).sort((a, b) => a.date.localeCompare(b.date));
   const days = {}; L.forEach(l => (days[l.date] = days[l.date] || []).push(l));
   const cname = id => (A.classById(id) || { name: '—' }).name;
-  return `<div class="row">${classPicker()}<label class="chk"><input type="checkbox" data-role="allcls" ${ui.filterAll ? 'checked' : ''}> ${T('allClasses')}</label></div>
+  return `${pinnedDocs()}<div class="row">${classPicker()}<label class="chk"><input type="checkbox" data-role="allcls" ${ui.filterAll ? 'checked' : ''}> ${T('allClasses')}</label>
+    <span style="flex:1"></span><button class="btn btn--ghost btn--s" data-act="fillWeek">${T('fillWeek')}</button></div>
   <div class="grid2" style="grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr)">
     <div class="card">
       <div class="row"><button class="btn btn--ghost btn--s" data-act="wkPrev">←</button>
@@ -152,7 +159,7 @@ function agenda() {
           ${l.objectives ? `<div><span class="tag tag--obj">${T('objectives')}</span><p>${esc(l.objectives)}</p></div>` : ''}
           ${l.homework ? `<div><span class="tag tag--hw">${T('homework')}</span><p>${esc(l.homework)}</p></div>` : ''}
           ${l.notes ? `<div><span class="tag">${T('notes')}</span><p>${esc(l.notes)}</p></div>` : ''}
-          <div class="row"><button class="btn btn--ghost btn--s" data-editl="${l.id}">${T('edit')}</button><button class="btn btn--ghost btn--s" data-checkl="${l.id}">${T('p_checklist')}</button></div></div>`).join('')}`).join('')
+          <div class="row"><button class="btn btn--ghost btn--s" data-editl="${l.id}">${T('edit')}</button><button class="btn btn--ghost btn--s" data-checkl="${l.id}">${T('p_checklist')}</button>${l.pageId && A.state.pages.some(p => p.id === l.pageId) ? `<button class="btn btn--s" data-gopage="${l.pageId}">▸ ${T('openPage')}</button>` : ''}</div></div>`).join('')}`).join('')
       : `<p class="lbl-s">${T('noLesson')}</p>`}
     </div>
     <div style="display:grid;gap:16px">
@@ -166,6 +173,7 @@ function agenda() {
         <label class="field"><span>${T('objectives')}</span><textarea class="inp" name="objectives" placeholder="${T('objPh')}">${esc(ed ? ed.objectives : '')}</textarea></label>
         <label class="field"><span>${T('homework')}</span><textarea class="inp" name="homework">${esc(ed ? ed.homework : '')}</textarea></label>
         <label class="field"><span>${T('notes')}</span><textarea class="inp" name="notes">${esc(ed ? ed.notes : '')}</textarea></label>
+        <label class="field"><span>${T('linkedPage')}</span><select class="inp" name="pageId"><option value="">—</option>${A.state.pages.map((p, j) => `<option value="${p.id}" ${ed && ed.pageId === p.id ? 'selected' : ''}>${esc(p.name || T('page') + ' ' + (j + 1))}</option>`).join('')}</select></label>
         <div class="row"><button class="btn">${T('save')}</button>${ed ? `<button type="button" class="btn btn--ghost" data-act="cancelEdit">${T('cancel')}</button><span style="flex:1"></span><button type="button" class="btn btn--black btn--s" data-act="delLesson">${T('delete')}</button>` : ''}</div>
       </form>
       <div class="card"><h3>${T('homeworkList')}</h3>
@@ -179,13 +187,17 @@ function agenda() {
 function eventsCard() {
   const S = A.state; S.events = S.events || [];
   const now = new Date().toISOString().slice(0, 16);
-  const evs = S.events.slice().sort((a, c) => a.date.localeCompare(c.date));
+  const all = S.events.slice().sort((a, c) => a.date.localeCompare(c.date));
+  const past = all.filter(e => e.date < now).length;
+  const evs = ui.showPast ? all : all.filter(e => e.date >= now);
   return `<form class="card" data-role="eventform"><h3>${T('events')}</h3>
     <div class="row"><label class="field" style="flex:1;min-width:150px"><span>${T('eventName')}</span><input class="inp" name="title" required placeholder="${T('eventPh')}"></label>
       <label class="field"><span>${T('eventDate')}</span><input class="inp" type="datetime-local" name="date" required></label>
       <button class="btn" style="align-self:end">${T('add')}</button></div>
-    ${evs.length ? evs.map(e => `<div class="lesson" style="border-left-color:${e.date < now ? 'var(--d-gris2)' : 'var(--d-blau)'}"><div class="lesson-top"><b>${esc(e.title)}</b><span class="tag">${new Date(e.date).toLocaleString(locale(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>
+    ${evs.length ? evs.map(e => `<div class="lesson" style="border-left-color:${e.date < now ? 'var(--d-gris2)' : 'var(--d-blau)'}"><div class="lesson-top"><b>${esc(e.title)}</b><span class="tag">${new Date(e.date).toLocaleString(locale(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span></div>${e.note ? `<p class="lbl-s">${esc(e.note)}</p>` : ''}
       <div class="row"><button type="button" class="btn btn--s" data-evshow="${e.id}">${T('showCountdown')}</button><button type="button" class="btn btn--ghost btn--s" data-evdel="${e.id}">${T('delete')}</button></div></div>`).join('') : `<p class="lbl-s" style="margin:0">${T('noEvents')}</p>`}
+    <div class="row">${past ? `<button type="button" class="btn btn--ghost btn--s" data-act="showPast">${ui.showPast ? T('hidePast') : T('showPast').replace('{n}', past)}</button>` : ''}
+      <label class="btn btn--ghost btn--s">${T('importEvents')}<input type="file" accept=".json,application/json" hidden data-role="evimport"></label></div>
     <p class="lbl-s" style="margin:0">${T('eventsNote')}</p></form>`;
 }
 
@@ -302,12 +314,233 @@ function settings() {
   </div>`;
 }
 
+
+/* =====================================================================
+   DOCUMENTS PDF (chiffrés, IndexedDB du navigateur — jamais publiés)
+   ===================================================================== */
+const DOCDB = 'didac-tableau-docs';
+function idb() { return new Promise((res, rej) => { const r = indexedDB.open(DOCDB, 1); r.onupgradeneeded = () => r.result.createObjectStore('docs', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function idbOp(mode, fn) {
+  const db = await idb();
+  return new Promise((res, rej) => { const tx = db.transaction('docs', mode); const req = fn(tx.objectStore('docs')); tx.oncomplete = () => { db.close(); res(req ? req.result : undefined); }; tx.onerror = () => rej(tx.error); });
+}
+const idbPut = rec => idbOp('readwrite', s => s.put(rec));
+const idbGet = id => idbOp('readonly', s => s.get(id));
+const idbDel = id => idbOp('readwrite', s => s.delete(id));
+const idbAll = () => idbOp('readonly', s => s.getAll());
+const idbClear = () => idbOp('readwrite', s => s.clear());
+async function addDoc(file, meta) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, await file.arrayBuffer());
+  const id = uid(); await idbPut({ id, iv, ct });
+  D.docs.push({ id, ...meta, name: file.name, size: file.size, type: file.type || 'application/pdf', added: new Date().toISOString() });
+  await persist();
+}
+async function docBlob(id) {
+  const r = await idbGet(id); if (!r) throw new Error('missing');
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: r.iv }, key, r.ct);
+  const m = D.docs.find(d => d.id === id);
+  return new Blob([pt], { type: (m && m.type) || 'application/pdf' });
+}
+async function reencryptDocs(oldKey, newKey) {
+  for (const r of await idbAll()) {
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: r.iv }, oldKey, r.ct);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    await idbPut({ id: r.id, iv, ct: await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, newKey, pt) });
+  }
+}
+// Sauvegarde : les PDF voyagent chiffrés dans le fichier de sauvegarde
+window.DidacDocs = {
+  async exportAll() { try { return (await idbAll()).map(r => ({ id: r.id, iv: b64(r.iv), ct: b64(r.ct) })); } catch (e) { return []; } },
+  async importAll(list) { await idbClear(); for (const r of list || []) await idbPut({ id: r.id, iv: unb64(r.iv), ct: unb64(r.ct) }); }
+};
+
+const DOC_CATS = ['termine', 'ferien', 'semester', 'stundenplan', 'other'];
+const fmtSize = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' Mo' : Math.max(1, Math.round(n / 1024)) + ' Ko';
+function documents() {
+  const docs = D.docs;
+  const view = ui.docView ? docs.find(d => d.id === ui.docView) : null;
+  return `${view ? `<div class="card"><div class="row"><h3 style="flex:1">${esc(view.title || view.name)}</h3>
+      <a class="btn btn--ghost btn--s" href="${ui.docURL}" target="_blank" rel="noopener">${T('newTab')}</a>
+      <a class="btn btn--ghost btn--s" href="${ui.docURL}" download="${esc(view.name)}">${T('download')}</a>
+      <button class="btn btn--s" data-act="docClose">${T('close')}</button></div>
+      <iframe class="doc-frame" src="${ui.docURL}" title="${esc(view.title || view.name)}"></iframe></div>` : ''}
+  <form class="card" data-role="docform"><h3>${T('addDoc')}</h3>
+    <div class="row">
+      <label class="field" style="flex:2;min-width:200px"><span>${T('docFile')}</span><input class="inp" type="file" name="file" accept="application/pdf,.pdf" required></label>
+      <label class="field"><span>${T('docCat')}</span><select class="inp" name="cat">${DOC_CATS.map(c => `<option value="${c}">${T('dc_' + c)}</option>`).join('')}</select></label>
+      <label class="field" style="flex:1;min-width:140px"><span>${T('docSubject')}</span><input class="inp" name="subject" placeholder="${T('docSubjectPh')}"></label>
+      <label class="field" style="flex:1;min-width:140px"><span>${T('docTitle')}</span><input class="inp" name="title" placeholder="${T('docTitlePh')}"></label>
+      <button class="btn" style="align-self:end">${T('add')}</button></div>
+    <p class="lbl-s" style="margin:0">${T('docPrivacy')}</p></form>
+  <div class="grid2">${DOC_CATS.map(c => { const L = docs.filter(d => d.cat === c).sort((a, b) => (a.subject || '').localeCompare(b.subject || '') || (a.title || a.name).localeCompare(b.title || b.name));
+    return `<div class="card"><h3>${T('dc_' + c)}</h3>${L.length ? L.map(d => `<div class="doc-row"><button class="doc-open" data-docopen="${d.id}">${ICON('news-paper')}<span><b>${esc(d.title || d.name)}</b>${d.subject ? ` <span class="tag">${esc(d.subject)}</span>` : ''}<br><span class="lbl-s">${esc(d.name)} · ${fmtSize(d.size)}</span></span></button>
+      <button class="w-x" data-docdel="${d.id}" title="${T('delete')}" aria-label="${T('delete')} ${esc(d.title || d.name)}">×</button></div>`).join('') : `<p class="lbl-s" style="margin:0">${T('noDoc')}</p>`}</div>`; }).join('')}</div>`;
+}
+function pinnedDocs() {
+  const L = D.docs.filter(d => d.cat === 'termine' || d.cat === 'ferien');
+  if (!L.length) return '';
+  return `<div class="pinbar"><span class="lbl-s">${T('importantDocs')}</span>${L.map(d => `<button class="btn btn--ghost btn--s" data-docopen="${d.id}">${esc(d.title || d.name)}</button>`).join('')}</div>`;
+}
+async function openDoc(id) {
+  try {
+    if (ui.docURL) URL.revokeObjectURL(ui.docURL);
+    ui.docURL = URL.createObjectURL(await docBlob(id)); ui.docView = id; tab = 'documents'; render();
+    const m = root.querySelector('.prof-main'); if (m) m.scrollTop = 0;
+  } catch (e) { A.openDlg(`<h2>${T('error')}</h2><p>${T('docErr')}</p><div class="row row--end"><button class="btn" data-act="closeDlg">${T('ok')}</button></div>`); }
+}
+
+/* =====================================================================
+   MON EMPLOI DU TEMPS (grille vide, créneaux Didac Bern)
+   ===================================================================== */
+const DIDAC_SLOTS = [['08:40', '09:20'], ['09:25', '10:05'], ['10:20', '11:00'], ['11:05', '11:45'], ['11:50', '12:30'], ['12:35', '13:30', 1], ['13:30', '14:10'], ['14:20', '15:00'], ['15:05', '15:45'], ['15:50', '16:30'], ['16:40', '17:20']]
+  .map(([s, e, brk]) => ({ s, e, brk: !!brk }));
+const TT_COLORS = ['gris1', 'gelb', 'blau', 'gruen', 'orange', 'pink'];
+const DAYS = [1, 2, 3, 4, 5];
+function ttCellLesson(d, i, c) {
+  const date = addDays(ui.ttWeek, d - 1), sl = D.timetable.slots[i];
+  return D.lessons.find(l => l.date === date && l.time === sl.s && (!c.classId || l.classId === c.classId));
+}
+function timetable() {
+  ui.ttWeek = ui.ttWeek || mondayOf(todayISO());
+  const TTb = D.timetable, today = todayISO(), now = new Date(), hm = `${A.pad(now.getHours())}:${A.pad(now.getMinutes())}`;
+  const cname = id => (A.classById(id) || {}).name || '';
+  const head = `<div class="row"><button class="btn btn--ghost btn--s" data-act="ttPrev">←</button>
+      <h3 style="flex:1;text-align:center;color:var(--d-rot);margin:0">${T('week')} ${fmtDate(ui.ttWeek, { day: 'numeric', month: 'short' })} – ${fmtDate(addDays(ui.ttWeek, 4), { day: 'numeric', month: 'short', year: 'numeric' })}</h3>
+      <button class="btn btn--ghost btn--s" data-act="ttToday">${T('today')}</button><button class="btn btn--ghost btn--s" data-act="ttNext">→</button>
+      <button class="btn btn--ghost btn--s" data-act="ttSlots" aria-pressed="${!!ui.ttEdit}">${T('editSlots')}</button></div>`;
+  if (ui.ttEdit) return head + `<form class="card" data-role="slotform"><h3>${T('editSlots')}</h3>
+    <table class="tbl" style="width:auto"><thead><tr><th>${T('slotStart')}</th><th>${T('slotEnd')}</th><th>${T('slotBreak')}</th><th></th></tr></thead><tbody>
+    ${TTb.slots.map((sl, i) => `<tr><td><input class="inp" type="time" name="s${i}" value="${sl.s}" required></td><td><input class="inp" type="time" name="e${i}" value="${sl.e}" required></td><td class="num"><input type="checkbox" name="b${i}" ${sl.brk ? 'checked' : ''}></td><td><button type="button" class="w-x" data-slotdel="${i}" aria-label="${T('delete')}">×</button></td></tr>`).join('')}
+    </tbody></table>
+    <div class="row"><button type="button" class="btn btn--ghost btn--s" data-act="slotAdd">+ ${T('addSlot')}</button><button type="button" class="btn btn--ghost btn--s" data-act="slotReset">${T('slotReset')}</button><span style="flex:1"></span><button class="btn">${T('save')}</button></div>
+    <p class="lbl-s" style="margin:0">${T('slotsNote')}</p></form>`;
+  return head + `<div class="note note--tip"><b>${T('tip')}</b> ${T('ttHint')}</div>
+  <div class="tt-wrap"><table class="tt"><thead><tr><th></th>${DAYS.map(d => { const date = addDays(ui.ttWeek, d - 1); return `<th class="${date === today ? 'is-today' : ''}">${cap(fmtDate(date, { weekday: 'long' }))}<br><span class="lbl-s">${fmtDate(date, { day: 'numeric', month: 'short' })}</span></th>`; }).join('')}</tr></thead><tbody>
+  ${TTb.slots.map((sl, i) => sl.brk
+    ? `<tr class="tt-brk"><th>${sl.s}–${sl.e}</th><td colspan="5">${T('lunch')}</td></tr>`
+    : `<tr><th class="${ui.ttWeek === mondayOf(today) && hm >= sl.s && hm < sl.e ? 'is-now' : ''}">${sl.s}<br><span class="lbl-s">${sl.e}</span></th>${DAYS.map(d => {
+      const c = TTb.cells[d + '-' + i]; const date = addDays(ui.ttWeek, d - 1);
+      if (!c) return `<td class="${date === today ? 'is-today' : ''}"><button class="tt-empty" data-cell="${d}-${i}" aria-label="${T('ttAdd')}">+</button></td>`;
+      const les = ttCellLesson(d, i, c);
+      return `<td class="${date === today ? 'is-today' : ''}"><button class="tt-cell" data-cell="${d}-${i}" style="background:var(--d-${c.color || 'gris1'})"><b>${esc(c.subject || cname(c.classId))}</b>${c.classId && c.subject ? `<span>${esc(cname(c.classId))}</span>` : ''}${c.room ? `<span>${T('room')} ${esc(c.room)}</span>` : ''}${les ? `<span class="tt-les">✓ ${esc(les.topic || T('lesson'))}</span>` : ''}${c.pageId ? `<span class="tt-pg">▸ ${T('page')}</span>` : ''}</button></td>`;
+    }).join('')}</tr>`).join('')}
+  </tbody></table></div>`;
+}
+function cellDialog(d, i) {
+  const k = d + '-' + i, c = D.timetable.cells[k] || {}, sl = D.timetable.slots[i], S = A.state;
+  const date = addDays(ui.ttWeek, d - 1);
+  const pages = S.pages.map((p, j) => `<option value="${p.id}" ${c.pageId === p.id ? 'selected' : ''}>${esc(p.name || T('page') + ' ' + (j + 1))}</option>`).join('');
+  A.openDlg(`<h2>${cap(fmtDate(date, { weekday: 'long' }))} · ${sl.s}–${sl.e}</h2>
+    <form data-role="cellform" class="cd-form" style="padding:0;max-width:none">
+      <div class="row"><label class="field" style="flex:1"><span>${T('ttSubject')}</span><input class="inp" name="subject" value="${esc(c.subject || '')}" placeholder="${T('ttSubjectPh')}"></label>
+        <label class="field" style="width:7em"><span>${T('room')}</span><input class="inp" name="room" value="${esc(c.room || '')}"></label></div>
+      <label class="field"><span>${T('class')}</span><select class="inp" name="classId"><option value="">—</option>${S.classes.map(x => `<option value="${x.id}" ${c.classId === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+      <label class="field"><span>${T('linkedPage')}</span><select class="inp" name="pageId"><option value="">—</option>${pages}</select></label>
+      <div class="field"><span>${T('color')}</span><div class="row">${TT_COLORS.map(col => `<label class="sw-radio"><input type="radio" name="color" value="${col}" ${(c.color || 'gris1') === col ? 'checked' : ''}><span class="sw" style="background:var(--d-${col})" title="${T('bg_' + col)}"></span></label>`).join('')}</div></div>
+      <label class="chk"><input type="checkbox" name="all"> ${T('ttRepeat')}</label>
+      <div class="row">${D.timetable.cells[k] ? `<button type="button" class="btn btn--black btn--s" data-cact="del">${T('delete')}</button>` : ''}<span style="flex:1"></span>
+        <button type="button" class="btn btn--ghost" data-act="closeDlg">${T('cancel')}</button><button class="btn">${T('save')}</button></div>
+      ${D.timetable.cells[k] ? `<div class="row" style="border-top:1px solid var(--d-gris1);padding-top:12px">
+        ${c.pageId && S.pages.some(p => p.id === c.pageId) ? `<button type="button" class="btn btn--s" data-cact="page">▸ ${T('openPage')}</button>` : ''}
+        <button type="button" class="btn btn--s btn--ghost" data-cact="lesson">${T('lessonOf')} ${fmtDate(date, { day: 'numeric', month: 'short' })}</button></div>` : ''}
+    </form>`, body => {
+    const f = $('form', body);
+    f.onsubmit = e => {
+      e.preventDefault();
+      const o = { subject: f.subject.value.trim(), room: f.room.value.trim(), classId: f.classId.value, pageId: f.pageId.value, color: (f.querySelector('[name=color]:checked') || {}).value || 'gris1' };
+      const keys = f.all.checked ? D.timetable.slots.map((s, j) => j).filter(j => !D.timetable.slots[j].brk).map(j => d + '-' + j).filter(kk => kk === k || !D.timetable.cells[kk]) : [k];
+      keys.forEach(kk => { D.timetable.cells[kk] = { ...o }; });
+      saveSoon(); A.closeDlg(); render();
+    };
+    // la case « toute la journée » n'a de sens qu'à la création
+    f.all.closest('label').hidden = !!D.timetable.cells[k];
+    body.querySelectorAll('[data-cact]').forEach(b => b.onclick = () => {
+      const a = b.dataset.cact;
+      if (a === 'del') { delete D.timetable.cells[k]; saveSoon(); A.closeDlg(); render(); }
+      if (a === 'page') { A.closeDlg(); open = false; render(); A.goPage(c.pageId); }
+      if (a === 'lesson') {
+        let l = ttCellLesson(d, i, c);
+        if (!l) { l = { id: uid(), date, time: sl.s, classId: c.classId || ui.cls || '', topic: c.subject || '', objectives: '', homework: '', notes: '', pageId: c.pageId || '' }; D.lessons.push(l); saveSoon(); }
+        A.closeDlg(); ui.editLesson = l.id; ui.week = mondayOf(date); if (l.classId) ui.cls = l.classId; tab = 'agenda'; render();
+      }
+    });
+  });
+}
+function fillWeekFromTimetable() {
+  let n = 0;
+  Object.entries(D.timetable.cells).forEach(([k, c]) => {
+    const [d, i] = k.split('-').map(Number); const sl = D.timetable.slots[i]; if (!sl || sl.brk) return;
+    const date = addDays(ui.week, d - 1);
+    if (D.lessons.some(l => l.date === date && l.time === sl.s && (!c.classId || l.classId === c.classId))) return;
+    D.lessons.push({ id: uid(), date, time: sl.s, classId: c.classId || '', topic: c.subject || '', objectives: '', homework: '', notes: '', pageId: c.pageId || '' }); n++;
+  });
+  saveSoon(); return n;
+}
+async function importEvents(file) {
+  try {
+    const d = JSON.parse(await file.text()); const list = Array.isArray(d) ? d : d.events;
+    if (!Array.isArray(list)) throw new Error('format');
+    const S = A.state; S.events = S.events || []; let n = 0;
+    list.forEach(e => { if (!e.title || !e.date) return; if (S.events.some(x => x.title === e.title && x.date === e.date)) return; S.events.push({ id: uid(), title: String(e.title), date: String(e.date).slice(0, 16), note: e.note ? String(e.note) : '' }); n++; });
+    A.save(); window.dispatchEvent(new Event('didac-events')); render();
+    A.openDlg(`<h2>${T('events')}</h2><p>${T('eventsImported').replace('{n}', n)}</p><div class="row row--end"><button class="btn" data-act="closeDlg">${T('ok')}</button></div>`);
+  } catch (e) { A.openDlg(`<h2>${T('error')}</h2><p>${T('eventsImportErr')}</p><div class="row row--end"><button class="btn" data-act="closeDlg">${T('ok')}</button></div>`); }
+}
+
+/* Évènements liés aux nouvelles zones */
+function bindExtra() {
+  root.addEventListener('submit', async e => {
+    const f = e.target;
+    if (f.dataset.role === 'docform') {
+      e.preventDefault(); const file = f.file.files[0]; if (!file) return;
+      const b = f.querySelector('button.btn'); b.disabled = true; b.textContent = T('checking');
+      await addDoc(file, { cat: f.cat.value, subject: f.subject.value.trim(), title: f.title.value.trim() || file.name.replace(/\.pdf$/i, '') });
+      render();
+    }
+    if (f.dataset.role === 'slotform') {
+      e.preventDefault();
+      const n = D.timetable.slots.length; const slots = [];
+      for (let i = 0; i < n; i++) slots.push({ s: f['s' + i].value, e: f['e' + i].value, brk: f['b' + i].checked });
+      D.timetable.slots = slots; ui.ttEdit = false; saveSoon(); render();
+    }
+  });
+  root.addEventListener('change', e => { if (e.target.dataset.role === 'evimport' && e.target.files[0]) importEvents(e.target.files[0]); });
+  root.addEventListener('click', async e => {
+    const t = e.target;
+    const op = t.closest('[data-docopen]'); if (op) { openDoc(op.dataset.docopen); return; }
+    const dd = t.closest('[data-docdel]');
+    if (dd) { const m = D.docs.find(x => x.id === dd.dataset.docdel); if (await A.confirmBox(T('delDocQ').replace('{d}', esc(m.title || m.name)), T('delete'))) { await idbDel(m.id); D.docs = D.docs.filter(x => x !== m); if (ui.docView === m.id) { ui.docView = null; } await persist(); render(); } return; }
+    const cell = t.closest('[data-cell]'); if (cell) { const [d, i] = cell.dataset.cell.split('-').map(Number); cellDialog(d, i); return; }
+    const sd = t.closest('[data-slotdel]'); if (sd) { D.timetable.slots.splice(+sd.dataset.slotdel, 1); remapCells(+sd.dataset.slotdel); saveSoon(); render(); return; }
+    const gp = t.closest('[data-gopage]'); if (gp) { open = false; render(); A.goPage(gp.dataset.gopage); return; }
+    const a = t.closest('[data-act]'); if (!a) return;
+    const act = a.dataset.act;
+    if (act === 'docClose') { if (ui.docURL) URL.revokeObjectURL(ui.docURL); ui.docURL = null; ui.docView = null; render(); }
+    if (act === 'ttPrev') { ui.ttWeek = addDays(ui.ttWeek, -7); render(); }
+    if (act === 'ttNext') { ui.ttWeek = addDays(ui.ttWeek, 7); render(); }
+    if (act === 'ttToday') { ui.ttWeek = mondayOf(todayISO()); render(); }
+    if (act === 'ttSlots') { ui.ttEdit = !ui.ttEdit; render(); }
+    if (act === 'slotAdd') { const last = D.timetable.slots[D.timetable.slots.length - 1]; D.timetable.slots.push({ s: last ? last.e : '08:00', e: last ? last.e : '08:45', brk: false }); render(); }
+    if (act === 'slotReset') { if (await A.confirmBox(T('slotResetQ'))) { D.timetable.slots = DIDAC_SLOTS.map(x => ({ ...x })); saveSoon(); render(); } }
+    if (act === 'fillWeek') { const n = fillWeekFromTimetable(); render(); A.openDlg(`<h2>${T('p_agenda')}</h2><p>${n ? T('weekFilled').replace('{n}', n) : T('weekFilledNone')}</p><div class="row row--end"><button class="btn" data-act="closeDlg">${T('ok')}</button></div>`); }
+    if (act === 'showPast') { ui.showPast = !ui.showPast; render(); }
+  });
+}
+// quand on supprime un créneau, les cases des créneaux suivants remontent d'une ligne
+function remapCells(removed) {
+  const out = {};
+  Object.entries(D.timetable.cells).forEach(([k, c]) => { const [d, i] = k.split('-').map(Number); if (i === removed) return; out[d + '-' + (i > removed ? i - 1 : i)] = c; });
+  D.timetable.cells = out;
+}
+
 /* ---------- CSV ---------- */
 const csvCell = v => { v = String(v ?? ''); return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
 const csv = rows => '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\r\n');
 
 /* ---------- Évènements ---------- */
 function bind() {
+  bindExtra();
   root.addEventListener('submit', async e => {
     const f = e.target; e.preventDefault();
     const role = f.dataset.role;
@@ -443,8 +676,8 @@ function bind() {
     if (act === 'clEdit') { ui.clEdit = !ui.clEdit; render(); }
     if (act === 'clReset') { if (await A.confirmBox(T('clResetQ'))) { D.checklist.template = defaultTemplate(); saveSoon(); render(); } }
     if (act === 'clUncheck') { delete D.checklist.done[ui.clDate + '|' + (ui.cls || '')]; saveSoon(); render(); }
-    if (act === 'backup') { await persist(); const S = A.state; A.download(`didac-tableau-${todayISO()}.json`, JSON.stringify({ app: 'didac-tableau', v: 1, date: new Date().toISOString(), state: S, vault: LS.get(VKEY, null) })); }
-    if (act === 'wipe') { if (await A.confirmBox(T('wipeQ'), T('wipe'))) { localStorage.removeItem(VKEY); key = null; D = null; render(); } }
+    if (act === 'backup') { await persist(); const S = A.state; A.download(`didac-tableau-${todayISO()}.json`, JSON.stringify({ app: 'didac-tableau', v: 1, date: new Date().toISOString(), state: S, vault: LS.get(VKEY, null), docs: await window.DidacDocs.exportAll() })); }
+    if (act === 'wipe') { if (await A.confirmBox(T('wipeQ'), T('wipe'))) { localStorage.removeItem(VKEY); try { await idbClear(); } catch (e) { } key = null; D = null; render(); } }
   });
 }
 function importFile(file) {
@@ -455,6 +688,7 @@ function importFile(file) {
       const d = JSON.parse(r.result); if (d.app !== 'didac-tableau' || !d.vault) throw new Error('format');
       if (!(await A.confirmBox(T('importQ')))) return;
       LS.set(VKEY, d.vault); if (d.state) { LS.set('didac-tableau-v1', d.state); }
+      if (d.docs) await window.DidacDocs.importAll(d.docs);
       location.reload();
     } catch (e) { A.openDlg(`<h2>${T('error')}</h2><p>${T('importErr')}</p><div class="row row--end"><button class="btn" data-act="closeDlg">${T('ok')}</button></div>`); }
   };

@@ -949,8 +949,8 @@ function editClass(id) {
 function download(name, text, type = 'application/json') {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-function exportBoard() {
-  const data = { app: 'didac-tableau', v: 1, date: new Date().toISOString(), state: S, vault: LS.get('didac-tableau-vault', null) };
+async function exportBoard() {
+  const data = { app: 'didac-tableau', v: 1, date: new Date().toISOString(), state: S, vault: LS.get('didac-tableau-vault', null), docs: window.DidacDocs ? await window.DidacDocs.exportAll() : [] };
   download(`didac-tableau-${todayISO()}.json`, JSON.stringify(data));
 }
 function importBoard(file) {
@@ -963,6 +963,7 @@ function importBoard(file) {
       if (!(await confirmBox(T('importQ')))) return;
       S = d.state; S.classes = S.classes || []; S.presence = S.presence || {};
       if (d.vault) LS.set('didac-tableau-vault', d.vault);
+      if (d.docs && window.DidacDocs) await window.DidacDocs.importAll(d.docs);
       save(true); applyStatic(); renderTabs(); renderBoard();
       window.dispatchEvent(new Event('didac-vault-replaced'));
     } catch (e) { openDlg(`<h2>${T('error')}</h2><p>${T('importErr')}</p><div class="row row--end"><button class="btn" data-act="closeDlg">${T('ok')}</button></div>`); }
@@ -980,7 +981,8 @@ let rzT; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setT
 /* ---------- API partagée avec prof.js ---------- */
 window.DidacApp = {
   T, esc, uid, h, $, LS, ICON, pad, todayISO, locale, download, exportPDF, openDlg, closeDlg, confirmBox, openClasses,
-  get state() { return S; }, classById, save, addWidget, iconPicker
+  get state() { return S; }, classById, save, addWidget, iconPicker,
+  goPage(id) { const i = S.pages.findIndex(p => p.id === id); if (i < 0) return; S.current = i; save(); renderTabs(); renderBoard(); }
 };
 
 applyStatic(); renderTabs(); renderBoard();

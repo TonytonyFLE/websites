@@ -32,3 +32,13 @@ dés D4/D6/D8/D10/D12/D20 + pièce, évènements planifiés dans Espace prof ›
 et repris par le compte à rebours, planning avec icônes Didac en mode checklist ou liste,
 widget Sticker (icônes Didac), formes dans le dessin (ligne, flèche, rectangle, cercle, triangle, étoile, remplissage, annuler),
 bouton « ← Retour au tableau » dans le bandeau quand l'espace prof est ouvert.
+
+## v1.2 (27.11.2026) : emploi du temps et documents
+- Espace prof › Emploi du temps : grille vide lundi–vendredi, lignes = créneaux Didac Bern
+  (08:40–09:20 … 16:40–17:20, pause de midi 12:35–13:30), modifiables via « Horaires ».
+  Chaque case : matière, classe, salle, couleur, page du tableau liée → « Ouvrir la page » / « Leçon du … ».
+- Agenda : « Remplir la semaine depuis l'emploi du temps », page liée par leçon, bandeau « Documents importants ».
+- Espace prof › Documents : PDF importés par chaque prof (dates importantes, vacances, plans de semestre par matière,
+  horaires, autres), chiffrés AES-256 dans IndexedDB, jamais publiés sur le site. Inclus (chiffrés) dans la sauvegarde.
+- Évènements : import d'un fichier JSON ({ "events": [{ "title", "date": "AAAA-MM-JJTHH:MM", "note" }] }).
+  Le fichier des dates Didac 2026/27 est gardé hors du site, dans le dossier privé tableau-classe-prive/.
