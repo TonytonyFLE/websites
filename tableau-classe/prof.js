@@ -241,11 +241,13 @@ function grades() {
     </div>
     <p class="lbl-s" style="margin:0">${T('gradeFormula')}</p></form>
   <div class="card"><h3>${esc(cls.name)}</h3>
-    ${G.evals.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>${T('student')}</th>
-      ${G.evals.map(ev => `<th class="num">${esc(ev.title)}<br><span class="lbl-s">${ev.date ? fmtDate(ev.date, { day: 'numeric', month: 'short' }) : ''} · ${ev.type === 'grade' ? T('typeGrade') : '/' + ev.max} · ×${ev.weight}</span><br><button class="w-x" data-delev="${ev.id}" title="${T('delete')}" aria-label="${T('delete')}">×</button></th>`).join('')}
-      <th class="num">${T('average')}</th></tr></thead><tbody>
-      ${cls.students.map(s => { const av = average(G, s.id); return `<tr><td>${esc(s.name)}</td>${G.evals.map(ev => { const raw = (G.marks[ev.id] || {})[s.id]; const g = gradeOf(ev, raw); return `<td class="num"><input class="inp" inputmode="decimal" data-ev="${ev.id}" data-stu="${s.id}" value="${raw ?? ''}" aria-label="${esc(s.name)} – ${esc(ev.title)}">${ev.type === 'points' ? `<div class="lbl-s" data-gout="${ev.id}|${s.id}">${fmtG(g)}</div>` : ''}</td>`; }).join('')}
-        <td class="num avg ${av === null ? '' : av < 4 ? 'mark-bad' : 'mark-ok'}" data-avg="${s.id}">${fmtG(av)}</td></tr>`; }).join('')}
+    ${G.evals.length ? `<div class="tbl-wrap"><table class="tbl tbl--grades"><thead><tr><th rowspan="2">${T('student')}</th>
+      ${G.evals.map(ev => `<th class="num ev-start" colspan="${ev.type === 'points' ? 2 : 1}">${esc(ev.title)} <button class="w-x" data-delev="${ev.id}" title="${T('delete')}" aria-label="${T('delete')} ${esc(ev.title)}">×</button><br><span class="lbl-s">${ev.date ? fmtDate(ev.date, { day: 'numeric', month: 'short' }) : ''} · ${T('weight')} ×${ev.weight}</span></th>`).join('')}
+      <th class="num ev-start" rowspan="2">${T('average')}<br><span class="lbl-s">/ 6</span></th></tr>
+      <tr>${G.evals.map(ev => ev.type === 'points' ? `<th class="num ev-start sub">${T('pointsCol')}<br>/ ${ev.max}</th><th class="num sub col-grade">${T('gradeCol')}<br>/ 6</th>` : `<th class="num ev-start sub col-grade">${T('gradeCol')}<br>/ 6</th>`).join('')}</tr></thead><tbody>
+      ${cls.students.map(s => { const av = average(G, s.id); return `<tr><td>${esc(s.name)}</td>${G.evals.map(ev => { const raw = (G.marks[ev.id] || {})[s.id]; const g = gradeOf(ev, raw); const inp = `<input class="inp" inputmode="decimal" data-ev="${ev.id}" data-stu="${s.id}" value="${raw ?? ''}" aria-label="${esc(s.name)} – ${esc(ev.title)} (${ev.type === 'points' ? T('pointsCol') : T('gradeCol')})">`;
+          return ev.type === 'points' ? `<td class="num ev-start">${inp}</td><td class="num col-grade" data-gout="${ev.id}|${s.id}">${fmtG(g)}</td>` : `<td class="num ev-start col-grade">${inp}</td>`; }).join('')}
+        <td class="num avg ev-start ${av === null ? '' : av < 4 ? 'mark-bad' : 'mark-ok'}" data-avg="${s.id}">${fmtG(av)}</td></tr>`; }).join('')}
       </tbody></table></div>
       <p class="lbl-s" style="margin:0">${T('gradeLegend')}</p>
       <div class="row"><button class="btn btn--ghost btn--s" data-act="gradesCsv">${T('exportCsv')}</button></div>`
@@ -370,7 +372,7 @@ function bind() {
       if (v === '') delete m[t.dataset.stu]; else if (!isNaN(v)) m[t.dataset.stu] = parseFloat(v);
       const go = root.querySelector(`[data-gout="${ev.id}|${t.dataset.stu}"]`); if (go) go.textContent = fmtG(gradeOf(ev, m[t.dataset.stu]));
       const av = average(G, t.dataset.stu); const cell = root.querySelector(`[data-avg="${t.dataset.stu}"]`);
-      if (cell) { cell.textContent = fmtG(av); cell.className = 'num avg ' + (av === null ? '' : av < 4 ? 'mark-bad' : 'mark-ok'); }
+      if (cell) { cell.textContent = fmtG(av); cell.className = 'num avg ev-start ' + (av === null ? '' : av < 4 ? 'mark-bad' : 'mark-ok'); }
       saveSoon();
     }
   });

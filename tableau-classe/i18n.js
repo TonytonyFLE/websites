@@ -1,7 +1,7 @@
 /* Textes FR / DE du tableau de classe Didac. Espace insécable ( ) avant « : ; ? ! » en français. */
 window.DIDAC_I18N = {
 fr: {
-  lightView: 'Allégé', fullView: 'Complet', clickToStart: 'Clique pour démarrer ou mettre en pause', dragHint: 'Glisse un nom vers un autre groupe pour le changer de groupe.',
+  pointsCol: 'Points', gradeCol: 'Note', lightView: 'Allégé', fullView: 'Complet', clickToStart: 'Clique pour démarrer ou mettre en pause', dragHint: 'Glisse un nom vers un autre groupe pour le changer de groupe.',
   diceType: 'Type de dé', coin: 'Pièce', dieShort: 'D', heads: 'Pile', tails: 'Face', flip: 'Lancer la pièce',
   fromAgenda: 'Évènement de l’espace prof', manualEvent: 'Autre (saisir ci-dessous)', eventsTip: 'Astuce : planifie tes évènements dans Espace prof › Agenda pour les choisir ici.', eventGone: 'Cet évènement a été supprimé. Clique sur « Modifier ».',
   shapes: 'Formes', sh_pen: 'Crayon', sh_line: 'Ligne', sh_arrow: 'Flèche', sh_rect: 'Rectangle', sh_ellipse: 'Cercle', sh_triangle: 'Triangle', sh_star: 'Étoile', fill: 'Plein', fillShape: 'Remplir les formes', undo: 'Annuler',
@@ -48,7 +48,7 @@ fr: {
   student: 'Élève', status: 'Statut', allPresent: 'Tous présents', absLegend: 'Choisis un statut pour chaque élève.',
   st_P: 'Présent', st_A: 'Absent', st_R: 'Retard', st_E: 'Excusé', absSummary: 'Bilan', lessonsRecorded: '{n} leçon(s) avec des absences saisies.', exportCsv: 'Exporter (CSV pour Excel)',
   rounding: 'Arrondi des notes', newEval: 'Nouvelle évaluation', evalTitle: 'Titre', evalPh: 'Test vocabulaire 3', evalType: 'Saisie', typePoints: 'Points', typeGrade: 'Note directe', maxPoints: 'Points max.', weight: 'Poids',
-  gradeFormula: 'Calcul suisse : note = points ÷ points max. × 5 + 1 (de 1 à 6).', gradeLegend: 'Moyenne pondérée. Vert = 4 ou plus, rose = moins de 4.',
+  gradeFormula: 'Calcul suisse : note = points ÷ points max. × 5 + 1 (de 1 à 6).', gradeLegend: 'Saisis les points dans la colonne blanche : la note sur 6 s\u2019affiche à côté, sur fond gris. Moyenne pondérée : vert = 4 ou plus, rose = moins de 4.',
   average: 'Moyenne', points: 'points', grade: 'note', noEval: 'Ajoute une première évaluation ci-dessus.', delEvalQ: 'Supprimer l’évaluation « {e} » et ses notes ?',
   customize: 'Personnaliser', doneEditing: 'Terminé', clEditHint: 'Modifie le texte d’une tâche, change l’ordre avec ↑ ou supprime avec ×. Ta checklist sert pour toutes les classes.',
   clProgress: 'des tâches faites pour cette leçon', clReset: 'Revenir à la checklist standard', clResetQ: 'Remplacer ta checklist par la checklist standard ?', clUncheck: 'Tout décocher', newTask: 'Nouvelle tâche', task: 'Tâche',
@@ -63,7 +63,7 @@ fr: {
   dangerZone: 'Tout effacer', wipeText: 'Supprime l’espace prof de ce navigateur (agenda, absences, notes, checklist). Les classes et les pages restent.', wipe: 'Effacer l’espace prof', wipeQ: 'Effacer définitivement l’espace prof de ce navigateur ?'
 },
 de: {
-  lightView: 'Schlank', fullView: 'Komplett', clickToStart: 'Klicke zum Starten oder Pausieren', dragHint: 'Ziehe einen Namen in eine andere Gruppe, um ihn zu verschieben.',
+  pointsCol: 'Punkte', gradeCol: 'Note', lightView: 'Schlank', fullView: 'Komplett', clickToStart: 'Klicke zum Starten oder Pausieren', dragHint: 'Ziehe einen Namen in eine andere Gruppe, um ihn zu verschieben.',
   diceType: 'Würfeltyp', coin: 'Münze', dieShort: 'W', heads: 'Kopf', tails: 'Zahl', flip: 'Münze werfen',
   fromAgenda: 'Ereignis aus dem Lehrpersonen-Bereich', manualEvent: 'Anderes (unten eingeben)', eventsTip: 'Tipp: Plane deine Ereignisse im Lehrpersonen-Bereich › Agenda, dann kannst du sie hier wählen.', eventGone: 'Dieses Ereignis wurde gelöscht. Klicke auf «Bearbeiten».',
   shapes: 'Formen', sh_pen: 'Stift', sh_line: 'Linie', sh_arrow: 'Pfeil', sh_rect: 'Rechteck', sh_ellipse: 'Kreis', sh_triangle: 'Dreieck', sh_star: 'Stern', fill: 'Gefüllt', fillShape: 'Formen füllen', undo: 'Rückgängig',
@@ -109,7 +109,7 @@ de: {
   student: 'Schüler:in', status: 'Status', allPresent: 'Alle anwesend', absLegend: 'Wähle für jede Person einen Status.',
   st_P: 'Anwesend', st_A: 'Abwesend', st_R: 'Verspätet', st_E: 'Entschuldigt', absSummary: 'Übersicht', lessonsRecorded: '{n} Lektion(en) mit erfassten Absenzen.', exportCsv: 'Exportieren (CSV für Excel)',
   rounding: 'Notenrundung', newEval: 'Neue Prüfung', evalTitle: 'Titel', evalPh: 'Wortschatztest 3', evalType: 'Eingabe', typePoints: 'Punkte', typeGrade: 'Note direkt', maxPoints: 'Max. Punkte', weight: 'Gewicht',
-  gradeFormula: 'Schweizer Formel: Note = Punkte ÷ max. Punkte × 5 + 1 (1 bis 6).', gradeLegend: 'Gewichteter Durchschnitt. Grün = 4 oder mehr, Pink = unter 4.',
+  gradeFormula: 'Schweizer Formel: Note = Punkte ÷ max. Punkte × 5 + 1 (1 bis 6).', gradeLegend: 'Trage die Punkte in der weissen Spalte ein: Die Note auf 6 erscheint daneben auf grauem Grund. Gewichteter Schnitt: Grün = 4 oder mehr, Pink = unter 4.',
   average: 'Schnitt', points: 'Punkte', grade: 'Note', noEval: 'Füge oben eine erste Prüfung hinzu.', delEvalQ: 'Prüfung «{e}» mit allen Noten löschen?',
   customize: 'Anpassen', doneEditing: 'Fertig', clEditHint: 'Ändere den Text einer Aufgabe, verschiebe sie mit ↑ oder lösche sie mit ×. Deine Checkliste gilt für alle Klassen.',
   clProgress: 'der Aufgaben für diese Lektion erledigt', clReset: 'Standard-Checkliste wiederherstellen', clResetQ: 'Deine Checkliste durch die Standard-Checkliste ersetzen?', clUncheck: 'Alle Häkchen entfernen', newTask: 'Neue Aufgabe', task: 'Aufgabe',

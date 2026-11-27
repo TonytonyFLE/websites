@@ -353,3 +353,10 @@ body.prof-open .dock > * { visibility: hidden; }
 .stk-lbl { border: 0; background: var(--d-blanc); color: var(--d-noir); font-weight: 700; text-align: center; border-radius: 999px; padding: 3px 12px; width: 100%; font-size: clamp(13px, 9cqmin, 30px); }
 .stk-lbl:placeholder-shown { opacity: 0; }
 .w--sticker:hover .stk-lbl:placeholder-shown, .stk-lbl:focus { opacity: 1; }
+/* Notes : deux colonnes par évaluation (points | note sur 6) */
+.tbl--grades thead { position: sticky; top: 0; z-index: 1; }
+.tbl--grades thead th { position: static; }
+.tbl--grades th.sub { font-weight: 400; font-size: 13px; }
+.tbl--grades .ev-start { border-left: 2px solid var(--d-gris2); }
+.tbl--grades td.col-grade { background: var(--d-gris1); font-weight: 700; font-size: 16px; min-width: 4em; }
+.tbl--grades th .w-x { width: 24px; height: 24px; font-size: 14px; vertical-align: middle; }
