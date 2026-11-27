@@ -723,9 +723,9 @@ function parseDate(s) {
   return '';
 }
 function parseTime(s) { const m = /^(\d{1,2})[:.h](\d{2})/.exec(String(s || '').trim()); return m ? `${A.pad(+m[1])}:${m[2]}` : ''; }
-const COLOR_ALIASES = { gelb: ['jaune', 'gelb', 'yellow'], blau: ['bleu', 'blau', 'blue'], gruen: ['vert', 'grun', 'gruen', 'green'], orange: ['orange'], pink: ['rose', 'pink'], gris1: ['gris', 'grau', 'grey', 'gray'] };
+const COLOR_ALIASES = { gelb: ['jaune', 'gelb', 'yellow', 'giallo'], blau: ['bleu', 'blau', 'blue', 'blu', 'azzurro'], gruen: ['vert', 'grun', 'gruen', 'green', 'verde'], orange: ['orange', 'arancione', 'arancio'], pink: ['rose', 'pink', 'rosa'], gris1: ['gris', 'grau', 'grey', 'gray', 'grigio'] };
 const parseColor = s => { const n = normKey(s); return Object.keys(COLOR_ALIASES).find(k => COLOR_ALIASES[k].includes(n)) || ''; };
-const DAY_ALIASES = { 1: ['1', 'lundi', 'lu', 'montag', 'mo'], 2: ['2', 'mardi', 'ma', 'dienstag', 'di'], 3: ['3', 'mercredi', 'me', 'mittwoch', 'mi'], 4: ['4', 'jeudi', 'je', 'donnerstag', 'do'], 5: ['5', 'vendredi', 've', 'freitag', 'fr'] };
+const DAY_ALIASES = { 1: ['1', 'lundi', 'lu', 'montag', 'mo', 'monday', 'mon', 'lunedi', 'lun'], 2: ['2', 'mardi', 'ma', 'dienstag', 'di', 'tuesday', 'tue', 'martedi', 'mar'], 3: ['3', 'mercredi', 'me', 'mittwoch', 'mi', 'wednesday', 'wed', 'mercoledi', 'mer'], 4: ['4', 'jeudi', 'je', 'donnerstag', 'do', 'thursday', 'thu', 'giovedi', 'gio'], 5: ['5', 'vendredi', 've', 'freitag', 'fr', 'friday', 'fri', 'venerdi', 'ven'] };
 const parseDay = s => +(Object.keys(DAY_ALIASES).find(k => DAY_ALIASES[k].includes(normKey(s))) || 0);
 function classByName(name, create) {
   const S = A.state; const n = String(name || '').trim(); if (!n) return null;
@@ -734,18 +734,19 @@ function classByName(name, create) {
   return c;
 }
 
-// Définition des modèles : colonnes FR / DE, exemples, alias acceptés et import
+const csvLang = () => (['de', 'en', 'it'].includes(A.state.lang) ? A.state.lang : 'fr');
+// Définition des modèles : colonnes FR / DE / EN / IT, exemples, alias acceptés et import
 const CSV_TYPES = {
   classes: {
-    cols: { fr: ['classe', 'eleve'], de: ['klasse', 'schueler'] },
+    cols: { fr: ['classe', 'eleve'], de: ['klasse', 'schueler'], en: ['class', 'student'], it: ['classe', 'allievo'] },
     ex: [['10b', 'Anna'], ['10b', 'Luca'], ['ÜFK', 'Giulia']],
-    alias: { classe: ['classe', 'klasse', 'class'], eleve: ['eleve', 'schueler', 'schuler', 'schulerin', 'schuelerin', 'student', 'prenom', 'vorname', 'nom', 'name'] },
+    alias: { classe: ['classe', 'klasse', 'class'], eleve: ['eleve', 'schueler', 'schuler', 'schulerin', 'schuelerin', 'student', 'prenom', 'vorname', 'nom', 'name', 'allievo', 'allieva', 'nome', 'firstname'] },
     run(rows) { let n = 0; rows.forEach(r => { const c = classByName(r.classe, true); if (!c || !r.eleve) return; if (!c.students.some(s => s.name === r.eleve)) { c.students.push({ id: uid(), name: r.eleve }); n++; } }); A.save(); window.dispatchEvent(new Event('didac-classes')); return n; }
   },
   lessons: {
-    cols: { fr: ['date', 'heure', 'classe', 'theme', 'objectifs', 'devoirs', 'remarques', 'taches', 'couleur'], de: ['datum', 'zeit', 'klasse', 'thema', 'lernziele', 'hausaufgaben', 'bemerkungen', 'aufgaben', 'farbe'] },
+    cols: { fr: ['date', 'heure', 'classe', 'theme', 'objectifs', 'devoirs', 'remarques', 'taches', 'couleur'], de: ['datum', 'zeit', 'klasse', 'thema', 'lernziele', 'hausaufgaben', 'bemerkungen', 'aufgaben', 'farbe'], en: ['date', 'time', 'class', 'topic', 'objectives', 'homework', 'notes', 'tasks', 'colour'], it: ['data', 'ora', 'classe', 'tema', 'obiettivi', 'compiti_casa', 'osservazioni', 'compiti', 'colore'] },
     ex: [['07.12.2026', '09:25', '10b', 'La négation', 'Tu sais dire ne… pas | ne… jamais', 'Fiche p. 4, ex. 1-3', 'Prévoir le jeu de l’oie', 'Distribuer la fiche | Corriger les devoirs', 'jaune'], ['08.12.2026', '13:30', 'ÜFK', 'Motivation', 'Fixer un objectif SMART', '', '', '', 'bleu']],
-    alias: { date: ['date', 'datum'], heure: ['heure', 'zeit', 'time', 'debut', 'beginn'], classe: ['classe', 'klasse'], theme: ['theme', 'thema', 'sujet', 'topic'], objectifs: ['objectifs', 'lernziele', 'ziele'], devoirs: ['devoirs', 'hausaufgaben', 'hausaufgabe'], remarques: ['remarques', 'bemerkungen', 'notes', 'notizen'], taches: ['taches', 'aufgaben', 'tasks', 'deroule', 'ablauf'], couleur: ['couleur', 'farbe', 'color'] },
+    alias: { date: ['date', 'datum', 'data'], heure: ['heure', 'zeit', 'time', 'debut', 'beginn', 'ora', 'start'], classe: ['classe', 'klasse', 'class'], theme: ['theme', 'thema', 'sujet', 'topic', 'tema'], objectifs: ['objectifs', 'lernziele', 'ziele', 'objectives', 'obiettivi'], devoirs: ['devoirs', 'hausaufgaben', 'hausaufgabe', 'homework', 'compiticasa', 'compitipercasa'], remarques: ['remarques', 'bemerkungen', 'notes', 'notizen', 'osservazioni', 'note'], taches: ['taches', 'aufgaben', 'tasks', 'deroule', 'ablauf', 'compiti', 'svolgimento', 'steps'], couleur: ['couleur', 'farbe', 'color', 'colour', 'colore'] },
     run(rows) {
       let n = 0;
       rows.forEach(r => {
@@ -760,9 +761,9 @@ const CSV_TYPES = {
     }
   },
   events: {
-    cols: { fr: ['titre', 'date', 'heure', 'remarque'], de: ['titel', 'datum', 'zeit', 'bemerkung'] },
+    cols: { fr: ['titre', 'date', 'heure', 'remarque'], de: ['titel', 'datum', 'zeit', 'bemerkung'], en: ['title', 'date', 'time', 'note'], it: ['titolo', 'data', 'ora', 'osservazione'] },
     ex: [['Weihnachtsferien', '24.12.2026', '00:00', 'jusqu’au 10.01.2027'], ['Semesterprüfungen', '25.01.2027', '08:40', 'D, F, M, E']],
-    alias: { titre: ['titre', 'titel', 'title', 'evenement', 'ereignis'], date: ['date', 'datum'], heure: ['heure', 'zeit', 'time'], remarque: ['remarque', 'bemerkung', 'note', 'notiz'] },
+    alias: { titre: ['titre', 'titel', 'title', 'evenement', 'ereignis', 'event', 'titolo', 'evento'], date: ['date', 'datum', 'data'], heure: ['heure', 'zeit', 'time', 'ora'], remarque: ['remarque', 'bemerkung', 'note', 'notiz', 'osservazione', 'nota'] },
     run(rows) {
       const S = A.state; S.events = S.events || []; let n = 0;
       rows.forEach(r => { const d = parseDate(r.date); if (!d || !r.titre) return; const date = `${d}T${parseTime(r.heure) || '08:00'}`; if (S.events.some(e => e.title === r.titre && e.date === date)) return; S.events.push({ id: uid(), title: r.titre, date, note: r.remarque || '' }); n++; });
@@ -770,9 +771,9 @@ const CSV_TYPES = {
     }
   },
   timetable: {
-    cols: { fr: ['jour', 'debut', 'matiere', 'classe', 'salle', 'couleur'], de: ['tag', 'beginn', 'fach', 'klasse', 'zimmer', 'farbe'] },
+    cols: { fr: ['jour', 'debut', 'matiere', 'classe', 'salle', 'couleur'], de: ['tag', 'beginn', 'fach', 'klasse', 'zimmer', 'farbe'], en: ['day', 'start', 'subject', 'class', 'room', 'colour'], it: ['giorno', 'inizio', 'materia', 'classe', 'aula', 'colore'] },
     ex: [['lundi', '09:25', 'FrE', '10b', '404', 'bleu'], ['mercredi', '09:25', 'ÜFK', 'ÜFK', '006', 'vert']],
-    alias: { jour: ['jour', 'tag', 'day', 'wochentag'], debut: ['debut', 'beginn', 'heure', 'zeit', 'start'], matiere: ['matiere', 'fach', 'cours', 'kurs', 'subject'], classe: ['classe', 'klasse'], salle: ['salle', 'zimmer', 'raum', 'room'], couleur: ['couleur', 'farbe', 'color'] },
+    alias: { jour: ['jour', 'tag', 'day', 'wochentag', 'giorno'], debut: ['debut', 'beginn', 'heure', 'zeit', 'start', 'inizio', 'ora', 'time'], matiere: ['matiere', 'fach', 'cours', 'kurs', 'subject', 'materia', 'corso'], classe: ['classe', 'klasse', 'class'], salle: ['salle', 'zimmer', 'raum', 'room', 'aula'], couleur: ['couleur', 'farbe', 'color', 'colour', 'colore'] },
     run(rows) {
       let n = 0;
       rows.forEach(r => {
@@ -785,22 +786,22 @@ const CSV_TYPES = {
     }
   },
   todos: {
-    cols: { fr: ['tache', 'echeance'], de: ['aufgabe', 'faellig'] },
+    cols: { fr: ['tache', 'echeance'], de: ['aufgabe', 'faellig'], en: ['task', 'due'], it: ['compito', 'scadenza'] },
     ex: [['Imprimer le test de vocabulaire', '04.12.2026'], ['Saisir les notes du 1er semestre', '24.01.2027']],
-    alias: { tache: ['tache', 'aufgabe', 'task', 'todo'], echeance: ['echeance', 'faellig', 'fallig', 'due', 'date', 'datum', 'bis'] },
+    alias: { tache: ['tache', 'aufgabe', 'task', 'todo', 'compito'], echeance: ['echeance', 'faellig', 'fallig', 'due', 'date', 'datum', 'bis', 'scadenza', 'data', 'duedate'] },
     run(rows) { let n = 0; rows.forEach(r => { if (!r.tache) return; D.todos.push({ id: uid(), text: r.tache, due: parseDate(r.echeance), done: false }); n++; }); return n; }
   },
   grades: {
-    cols: { fr: ['classe', 'evaluation', 'date', 'saisie', 'max', 'poids', 'eleve', 'resultat'], de: ['klasse', 'pruefung', 'datum', 'eingabe', 'max', 'gewicht', 'schueler', 'resultat'] },
+    cols: { fr: ['classe', 'evaluation', 'date', 'saisie', 'max', 'poids', 'eleve', 'resultat'], de: ['klasse', 'pruefung', 'datum', 'eingabe', 'max', 'gewicht', 'schueler', 'resultat'], en: ['class', 'assessment', 'date', 'entry', 'max', 'weight', 'student', 'result'], it: ['classe', 'valutazione', 'data', 'inserimento', 'max', 'peso', 'allievo', 'risultato'] },
     ex: [['10b', 'Test vocabulaire 1', '04.12.2026', 'points', '20', '1', 'Anna', '16'], ['10b', 'Test vocabulaire 1', '04.12.2026', 'points', '20', '1', 'Luca', '12.5'], ['10b', 'Exposé', '11.12.2026', 'note', '', '2', 'Anna', '5']],
-    alias: { classe: ['classe', 'klasse'], evaluation: ['evaluation', 'pruefung', 'prufung', 'test', 'titre', 'titel'], date: ['date', 'datum'], saisie: ['saisie', 'eingabe', 'type', 'typ'], max: ['max', 'pointsmax', 'maxpunkte', 'maximum'], poids: ['poids', 'gewicht', 'weight'], eleve: ['eleve', 'schueler', 'schuler', 'schulerin', 'schuelerin', 'name', 'prenom', 'vorname'], resultat: ['resultat', 'points', 'punkte', 'note', 'result'] },
+    alias: { classe: ['classe', 'klasse', 'class'], evaluation: ['evaluation', 'pruefung', 'prufung', 'test', 'titre', 'titel', 'assessment', 'valutazione', 'verifica'], date: ['date', 'datum', 'data'], saisie: ['saisie', 'eingabe', 'type', 'typ', 'entry', 'inserimento', 'tipo'], max: ['max', 'pointsmax', 'maxpunkte', 'maximum', 'maxpoints', 'puntimax'], poids: ['poids', 'gewicht', 'weight', 'peso'], eleve: ['eleve', 'schueler', 'schuler', 'schulerin', 'schuelerin', 'name', 'prenom', 'vorname', 'student', 'allievo', 'allieva', 'nome'], resultat: ['resultat', 'points', 'punkte', 'note', 'result', 'risultato', 'punti'] },
     run(rows) {
       let n = 0;
       rows.forEach(r => {
         const c = classByName(r.classe, true); if (!c || !r.evaluation || !r.eleve) return;
         let s0 = c.students.find(x => x.name.toLowerCase() === r.eleve.toLowerCase()); if (!s0) { s0 = { id: uid(), name: r.eleve }; c.students.push(s0); }
         const G = D.grades[c.id] = D.grades[c.id] || { evals: [], marks: {} };
-        const type = /^(note|grade)$/.test(normKey(r.saisie)) ? 'grade' : 'points';
+        const type = /^(note|grade|nota|voto)$/.test(normKey(r.saisie)) ? 'grade' : 'points';
         let ev = G.evals.find(e => e.title === r.evaluation);
         if (!ev) { ev = { id: uid(), title: r.evaluation, date: parseDate(r.date), type, max: parseFloat(String(r.max).replace(',', '.')) || 0, weight: parseFloat(String(r.poids).replace(',', '.')) || 1 }; G.evals.push(ev); }
         const v = parseFloat(String(r.resultat).replace(',', '.')); if (isNaN(v)) return;
@@ -810,30 +811,35 @@ const CSV_TYPES = {
     }
   },
   checklist: {
-    cols: { fr: ['section', 'tache'], de: ['abschnitt', 'aufgabe'] },
+    cols: { fr: ['section', 'tache'], de: ['abschnitt', 'aufgabe'], en: ['section', 'task'], it: ['sezione', 'compito'] },
     ex: [['préparation', 'Objectifs pédagogiques'], ['pendant', 'Absences'], ['suivi', 'Feedback du cours']],
-    alias: { section: ['section', 'abschnitt', 'phase', 'moment'], tache: ['tache', 'aufgabe', 'task'] },
+    alias: { section: ['section', 'abschnitt', 'phase', 'moment', 'sezione', 'fase'], tache: ['tache', 'aufgabe', 'task', 'compito'] },
     run(rows) {
-      const map = { before: ['preparation', 'avant', 'vorbereitung', 'vor', 'before'], during: ['pendant', 'pendantlecours', 'wahrend', 'waehrend', 'during', 'lektion'], after: ['suivi', 'apres', 'nachbereitung', 'nach', 'after'] };
+      const map = { before: ['preparation', 'avant', 'vorbereitung', 'vor', 'before', 'preparazione', 'prima'], during: ['pendant', 'pendantlecours', 'wahrend', 'waehrend', 'during', 'lektion', 'durante'], after: ['suivi', 'apres', 'nachbereitung', 'nach', 'after', 'followup', 'seguito', 'dopo'] };
       const tpl = { before: [], during: [], after: [] }; let n = 0;
       rows.forEach(r => { const k = Object.keys(map).find(x => map[x].includes(normKey(r.section))); if (!k || !r.tache) return; tpl[k].push({ id: uid(), text: r.tache }); n++; });
       if (n) D.checklist.template = tpl; return n;
     }
   }
 };
+// valeurs d'exemple traduites (couleurs, jours, sections…) pour les modèles EN / IT / DE
+const EX_WORDS = { jaune: { de: 'gelb', en: 'yellow', it: 'giallo' }, bleu: { de: 'blau', en: 'blue', it: 'blu' }, vert: { de: 'grün', en: 'green', it: 'verde' },
+  lundi: { de: 'Montag', en: 'Monday', it: 'lunedì' }, mercredi: { de: 'Mittwoch', en: 'Wednesday', it: 'mercoledì' }, points: { de: 'Punkte', en: 'points', it: 'punti' }, note: { de: 'Note', en: 'grade', it: 'nota' },
+  'préparation': { de: 'Vorbereitung', en: 'preparation', it: 'preparazione' }, pendant: { de: 'während', en: 'during', it: 'durante' }, suivi: { de: 'Nachbereitung', en: 'follow-up', it: 'seguito' } };
+const exRows = (def, lang) => def.ex.map(r => r.map(v => (EX_WORDS[v] && EX_WORDS[v][lang]) || v));
 function csvTemplate(type) {
-  const def = CSV_TYPES[type], lang = A.state.lang === 'de' ? 'de' : 'fr';
-  const rows = [def.cols[lang], ...def.ex];
+  const def = CSV_TYPES[type], lang = csvLang();
+  const rows = [def.cols[lang], ...exRows(def, lang)];
   return '﻿' + rows.map(r => r.map(csvCell).join(';')).join('\r\n');
 }
 function aiPrompt(type) {
-  const def = CSV_TYPES[type], lang = A.state.lang === 'de' ? 'de' : 'fr';
-  return T('aiPrompt').replace('{what}', T('csv_' + type)).replace('{cols}', def.cols[lang].join(';')).replace('{rules}', T('csvRules_' + type)).replace('{ex}', [def.cols[lang], ...def.ex].map(r => r.join(';')).join('\n'));
+  const def = CSV_TYPES[type], lang = csvLang();
+  return T('aiPrompt').replace('{what}', T('csv_' + type)).replace('{cols}', def.cols[lang].join(';')).replace('{rules}', T('csvRules_' + type)).replace('{ex}', [def.cols[lang], ...exRows(def, lang)].map(r => r.join(';')).join('\n'));
 }
 function csvCard() {
   return `<div class="card" style="grid-column:1/-1"><h3>${T('csvTitle')}</h3>
     <p style="margin:0">${T('csvIntro')}</p>
-    <div class="csv-grid">${Object.keys(CSV_TYPES).map(k => `<div class="csv-item"><b>${T('csv_' + k)}</b><span class="lbl-s">${CSV_TYPES[k].cols[A.state.lang === 'de' ? 'de' : 'fr'].join(' ; ')}</span>
+    <div class="csv-grid">${Object.keys(CSV_TYPES).map(k => `<div class="csv-item"><b>${T('csv_' + k)}</b><span class="lbl-s">${CSV_TYPES[k].cols[csvLang()].join(' ; ')}</span>
       <div class="row"><button class="btn btn--ghost btn--s" data-csvtpl="${k}">${T('csvTemplate')}</button><button class="btn btn--ghost btn--s" data-csvai="${k}">${T('csvAi')}</button>
       <label class="btn btn--s">${T('csvImport')}<input type="file" accept=".csv,text/csv,.txt" hidden data-csvimp="${k}"></label></div></div>`).join('')}</div>
     <div class="note note--tip"><b>${T('tip')}</b> ${T('csvTip')}</div></div>`;
@@ -850,7 +856,7 @@ async function importCSV(type, file) {
 function bindCSV() {
   root.addEventListener('change', e => { const k = e.target.dataset.csvimp; if (k && e.target.files[0]) { importCSV(k, e.target.files[0]); e.target.value = ''; } });
   root.addEventListener('click', e => {
-    const tp = e.target.closest('[data-csvtpl]'); if (tp) { A.download(`modele-${tp.dataset.csvtpl}.csv`.replace('modele', A.state.lang === 'de' ? 'vorlage' : 'modele'), csvTemplate(tp.dataset.csvtpl), 'text/csv;charset=utf-8'); return; }
+    const tp = e.target.closest('[data-csvtpl]'); if (tp) { A.download(`${{ fr: 'modele', de: 'vorlage', en: 'template', it: 'modello' }[csvLang()]}-${tp.dataset.csvtpl}.csv`, csvTemplate(tp.dataset.csvtpl), 'text/csv;charset=utf-8'); return; }
     const ai = e.target.closest('[data-csvai]');
     if (ai) {
       const txt = aiPrompt(ai.dataset.csvai);

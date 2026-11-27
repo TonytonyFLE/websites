@@ -24,8 +24,8 @@ const KEY = 'didac-tableau-v1';
 
 /* ---------- État ---------- */
 function defaultState() {
-  const de = (navigator.language || '').toLowerCase().startsWith('de');
-  return { lang: de ? 'de' : 'fr', pages: [{ id: uid(), name: '', bg: 'blanc', widgets: [] }], current: 0, classes: [], presence: {}, z: 10 };
+  const nl = (navigator.language || '').toLowerCase().slice(0, 2);
+  return { lang: ['de', 'en', 'it'].includes(nl) ? nl : 'fr', pages: [{ id: uid(), name: '', bg: 'blanc', widgets: [] }], current: 0, classes: [], presence: {}, z: 10 };
 }
 let S = LS.get(KEY, null) || defaultState();
 if (!S.pages || !S.pages.length) S = defaultState();
@@ -39,7 +39,7 @@ window.addEventListener('beforeunload', () => LS.set(KEY, S));
 
 /* ---------- Langue ---------- */
 const T = k => { const d = window.DIDAC_I18N[S.lang] || {}; return d[k] ?? window.DIDAC_I18N.fr[k] ?? k; };
-const locale = () => (S.lang === 'de' ? 'de-CH' : 'fr-CH');
+const locale = () => ({ de: 'de-CH', en: 'en-GB', it: 'it-CH' }[S.lang] || 'fr-CH');
 function applyStatic() {
   document.documentElement.lang = S.lang;
   document.title = T('appTitle');
@@ -1426,7 +1426,14 @@ function importBoard(file) {
 }
 
 /* ---------- Bandeau ---------- */
-document.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { S.lang = b.dataset.lang; save(); applyStatic(); renderTabs(); renderBoard(); window.dispatchEvent(new Event('didac-lang')); });
+// EN et IT sont chargés seulement quand on les choisit (le site reste léger)
+function loadLang(l, done) {
+  if (window.DIDAC_I18N[l]) return done();
+  const sc = document.createElement('script'); sc.src = `i18n-${l}.js?v=${window.DIDAC_V || ''}`; sc.onload = done; sc.onerror = done; document.head.appendChild(sc);
+}
+function setLang(l) { loadLang(l, () => { S.lang = l; save(); applyStatic(); renderTabs(); renderBoard(); window.dispatchEvent(new Event('didac-lang')); }); }
+document.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => setLang(b.dataset.lang));
+if (!window.DIDAC_I18N[S.lang]) setLang(S.lang);
 $('#btnClasses').onclick = () => openClasses();
 $('#btnFull').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); };
 document.addEventListener('fullscreenchange', applyStatic);
