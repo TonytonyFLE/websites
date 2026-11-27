@@ -170,7 +170,7 @@ function agenda() {
   const ed = ui.editLesson ? D.lessons.find(l => l.id === ui.editLesson) : null;
   const hw = D.lessons.filter(l => l.homework && l.date >= addDays(todayISO(), -14) && (ui.filterAll || !l.classId || l.classId === ui.cls)).sort((a, b) => a.date.localeCompare(b.date));
   const days = {}; L.forEach(l => (days[l.date] = days[l.date] || []).push(l));
-  const pageOpts = sel => A.state.pages.map((p, j) => `<option value="${p.id}" ${sel === p.id ? 'selected' : ''}>${esc(p.name || T('page') + ' ' + (j + 1))}</option>`).join('');
+  const pageOpts = sel => A.state.pages.map((p, j) => `<option value="${p.id}" ${sel === p.id ? 'selected' : ''}>${esc(A.pageLabel(p, j))}</option>`).join('');
   const main = ui.q ? searchResults() : `<div class="card">
       <div class="row"><button class="btn btn--ghost btn--s" data-act="wkPrev">←</button>
         <h3 style="flex:1;text-align:center">${T('week')} ${fmtDate(ui.week, { day: 'numeric', month: 'short' })} – ${fmtDate(end, { day: 'numeric', month: 'short', year: 'numeric' })}</h3>
@@ -281,7 +281,7 @@ function searchResults() {
 function tasksToPage(title, items, pageId) {
   const S = A.state;
   A.openDlg(`<h2>${T('tasksToPage')}</h2>
-    <label class="field"><span>${T('choosePage')}</span><select class="inp" id="t2p">${S.pages.map((p, j) => `<option value="${p.id}" ${p.id === (pageId || (S.pages[S.current] || {}).id) ? 'selected' : ''}>${esc(p.name || T('page') + ' ' + (j + 1))}</option>`).join('')}<option value="__new">+ ${T('addPage')}</option></select></label>
+    <label class="field"><span>${T('choosePage')}</span><select class="inp" id="t2p">${S.pages.map((p, j) => `<option value="${p.id}" ${p.id === (pageId || (S.pages[S.current] || {}).id) ? 'selected' : ''}>${esc(A.pageLabel(p, j))}</option>`).join('')}<option value="__new">+ ${T('addPage')}</option></select></label>
     <p class="lbl-s" style="margin:0">${T('tasksToPageHint').replace('{n}', items.length)}</p>
     <div class="row row--end"><button class="btn btn--ghost" data-act="closeDlg">${T('cancel')}</button><button class="btn" id="t2pOk">${T('ok')}</button></div>`, body => {
     $('#t2pOk', body).onclick = () => {
@@ -554,7 +554,7 @@ function timetable() {
 function cellDialog(d, i) {
   const k = d + '-' + i, sl = D.timetable.slots[i], S = A.state;
   const date = addDays(ui.ttWeek, d - 1), ok = date + '|' + i, c = cellAt(d, i, date) || {}, exists = !!(c.once || D.timetable.cells[k]);
-  const pages = S.pages.map((p, j) => `<option value="${p.id}" ${c.pageId === p.id ? 'selected' : ''}>${esc(p.name || T('page') + ' ' + (j + 1))}</option>`).join('');
+  const pages = S.pages.map((p, j) => `<option value="${p.id}" ${c.pageId === p.id ? 'selected' : ''}>${esc(A.pageLabel(p, j))}</option>`).join('');
   A.openDlg(`<h2>${cap(fmtDate(date, { weekday: 'long' }))} · ${sl.s}–${sl.e}</h2>
     <form data-role="cellform" class="cd-form" style="padding:0;max-width:none">
       <div class="row"><label class="field" style="flex:1"><span>${T('ttSubject')}</span><input class="inp" name="subject" value="${esc(c.subject || '')}" placeholder="${T('ttSubjectPh')}"></label>

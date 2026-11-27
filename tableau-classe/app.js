@@ -30,6 +30,19 @@ function defaultState() {
 let S = LS.get(KEY, null) || defaultState();
 if (!S.pages || !S.pages.length) S = defaultState();
 S.classes = S.classes || []; S.presence = S.presence || {};
+/* Cours = ensembles de pages. Les pages sans cours (anciennes versions) vont dans « Mes pages ». */
+const COURSE_COLORS = ['rot', 'blau', 'gruen', 'gelb', 'orange', 'pink'];
+function ensureCourses() {
+  S.courses = Array.isArray(S.courses) ? S.courses : [];
+  const ok = id => S.courses.some(c => c.id === id);
+  const lost = S.pages.filter(p => !ok(p.course));
+  if (lost.length || !S.courses.length) {
+    let c = S.courses.find(c => c.auto); if (!c) { c = { id: uid(), name: '', color: 'rot', auto: true, created: Date.now() }; S.courses.unshift(c); }
+    lost.forEach(p => { p.course = c.id; });
+  }
+}
+ensureCourses();
+let HOME = true; // le site s'ouvre sur l'accueil
 let saveT = null;
 function save(now) {
   clearTimeout(saveT);
@@ -50,7 +63,7 @@ function applyStatic() {
   $('#btnFull').innerHTML = `<span class="lbl">${document.fullscreenElement ? T('exitFull') : T('fullscreen')}</span>`;
   $('#btnFull').title = T('fullscreen');
   if ($('#dockShow')) applyDock();
-  applySide();
+  applySide(); applyHome();
 }
 
 /* ---------- Classes (partagées avec l'espace prof) ---------- */
@@ -1034,15 +1047,19 @@ const board = $('#board');
 board.addEventListener('scroll', () => { board.scrollTop = 0; board.scrollLeft = 0; });
 const mounted = new Map(); // id → { el, cleanup }
 const page = () => S.pages[S.current] || S.pages[0];
-const pageName = (p, i) => p.name || `${T('page')} ${i + 1}`;
+const pageName = (p, i) => p.name || `${T('page')} ${S.pages.filter((x, j) => j <= i && x.course === p.course).length || i + 1}`;
 
 /* ---------- Onglets + catalogue des pages ----------
    Barre : pages épinglées + 3 dernières ouvertes + page active. Toutes les pages : catalogue avec recherche. */
 const MAX_AUTO_PIN = 8;
 const isPinned = p => p.pinned !== false;
-function newPage(name) {
-  const p = { id: uid(), name: name || '', bg: 'blanc', widgets: [], created: Date.now() };
-  p.pinned = S.pages.filter(isPinned).length < MAX_AUTO_PIN;
+const curCourse = () => (S.pages[S.current] || S.pages[0] || {}).course || (S.courses[0] || {}).id;
+const courseById = id => S.courses.find(c => c.id === id);
+const courseName = c => c ? (c.name || T('defaultCourse')) : '';
+function newPage(name, course) {
+  course = course || curCourse();
+  const p = { id: uid(), name: name || '', bg: 'blanc', widgets: [], created: Date.now(), course };
+  p.pinned = S.pages.filter(x => x.course === course && isPinned(x)).length < MAX_AUTO_PIN;
   S.pages.push(p); return p;
 }
 function tabVisible(p, i) { return isPinned(p) || i === S.current || (S.recent || []).includes(p.id); }
@@ -1053,14 +1070,19 @@ function renderTabs() {
   const tabs = $('#tabs'), qIn = $('#sideQ');
   const words = fold(qIn.value).split(/\s+/).filter(Boolean);
   const match = (p, i) => { if (!words.length) return true; const t = pageText(p) + ' ' + fold(pageName(p, i)); return words.every(w => t.includes(w)); };
-  const all = S.pages.map((p, i) => ({ p, i })).filter(({ p, i }) => match(p, i));
+  const cc = curCourse(), mine = S.pages.map((p, i) => ({ p, i })).filter(({ p }) => p.course === cc);
+  const all = mine.filter(({ p, i }) => match(p, i));
+  const elsewhere = words.length ? S.pages.map((p, i) => ({ p, i })).filter(({ p, i }) => p.course !== cc && match(p, i)) : [];
   const pin = all.filter(({ p }) => isPinned(p)), other = all.filter(({ p }) => !isPinned(p)).sort((a, b) => (b.p.opened || 0) - (a.p.opened || 0));
-  const row = ({ p, i }) => `<div class="side-row"><button class="tab ${isPinned(p) ? '' : 'tab--tmp'}" aria-current="${i === S.current ? 'page' : 'false'}" data-i="${i}" title="${T('tabHint')}">${esc(pageName(p, i))}</button>`
+  const row = ({ p, i }) => `<div class="side-row"><button class="tab ${isPinned(p) ? '' : 'tab--tmp'}" aria-current="${i === S.current ? 'page' : 'false'}" data-i="${i}" title="${T('tabHint')}">${esc(pageName(p, i))}${p.course !== cc ? `<small class="side-crs">${esc(courseName(courseById(p.course)))}</small>` : ''}</button>`
     + `<button class="side-pin" data-pin="${i}" aria-pressed="${isPinned(p)}" title="${isPinned(p) ? T('unpinTab') : T('pinTab')}" aria-label="${isPinned(p) ? T('unpinTab') : T('pinTab')} : ${esc(pageName(p, i))}">${isPinned(p) ? '★' : '☆'}</button></div>`;
   tabs.innerHTML = (pin.length ? `<h3 class="side-h">${T('pinnedPages')}</h3>${pin.map(row).join('')}` : '')
     + (other.length ? `<h3 class="side-h">${T('otherPages')}</h3>${other.map(row).join('')}` : '')
-    + (all.length ? '' : `<p class="lbl-s side-none">${T('noPageFound')}</p>`);
-  $('#sideTitle').textContent = `${T('pagesTitle')} (${S.pages.length})`;
+    + (elsewhere.length ? `<h3 class="side-h">${T('otherCourses')}</h3>${elsewhere.map(row).join('')}` : '')
+    + (all.length || elsewhere.length ? '' : `<p class="lbl-s side-none">${T('noPageFound')}</p>`);
+  $('#sideTitle').textContent = `${T('pagesTitle')} (${mine.length})`;
+  const sc = $('#sideCourse'); sc.setAttribute('aria-label', T('course'));
+  sc.innerHTML = S.courses.map(c => `<option value="${c.id}" ${c.id === cc ? 'selected' : ''}>${esc(courseName(c))}</option>`).join('') + `<option value="__new">+ ${T('newCourse')}</option>`;
   const cur = tabs.querySelector('[aria-current=page]'); if (cur) cur.scrollIntoView({ block: 'nearest' });
 }
 function applySide() {
@@ -1074,6 +1096,86 @@ function setSide(hidden) { S.sideHidden = hidden; save(); applySide(); window.di
 $('#btnSide').onclick = () => setSide(!S.sideHidden);
 $('#sideHide').onclick = () => setSide(true);
 $('#sideQ').addEventListener('input', () => renderTabs());
+$('#sideCourse').addEventListener('change', e => { const v = e.target.value; if (v === '__new') { renderTabs(); editCourse(null); } else { $('#sideQ').value = ''; openCourse(v); } });
+
+/* ---------- Accueil + cours ---------- */
+const HOME_SVG = '<svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 9.5 10 3l7 6.5"/><path d="M5 8v9h10V8"/></svg>';
+function openCourse(id) {
+  let L = S.pages.map((p, i) => ({ p, i })).filter(({ p }) => p.course === id);
+  if (!L.length) { newPage('', id); L = [{ p: S.pages[S.pages.length - 1], i: S.pages.length - 1 }]; }
+  L.sort((a, b) => (b.p.opened || 0) - (a.p.opened || 0));
+  S.current = L[0].i; HOME = false; save(); applyHome(); renderBoard(); renderTabs();
+}
+function goHome() {
+  if ($('#btnProf').getAttribute('aria-pressed') === 'true') $('#btnProf').click();
+  closeDlg(); HOME = true; applyHome();
+}
+function applyHome() {
+  document.body.classList.toggle('home-on', HOME);
+  $('#home').hidden = !HOME;
+  const b = $('#btnHome'); b.innerHTML = `${HOME_SVG}<span class="lbl">${T('home')}</span>`; b.title = T('home'); b.setAttribute('aria-pressed', String(HOME));
+  if (HOME) renderHome();
+}
+function renderHome() {
+  const now = new Date(), fmtD = ts => ts ? new Date(ts).toLocaleDateString(locale(), { day: 'numeric', month: 'short' }) : '';
+  const cards = S.courses.map(c => {
+    const P = S.pages.filter(p => p.course === c.id), last = Math.max(0, ...P.map(p => p.opened || 0)), cls = classById(c.classId);
+    return `<div class="crs" style="--c:var(--d-${COURSE_COLORS.includes(c.color) ? c.color : 'rot'})"><button class="crs-open" data-open="${c.id}"><span class="crs-band"></span>
+      <b class="crs-n">${esc(courseName(c))}</b><span class="lbl-s">${cls ? esc(cls.name) + ' · ' : ''}${T('nPages').replace('{n}', P.length)}</span>
+      <span class="lbl-s">${last ? T('lastUsed') + ' ' + fmtD(last) : '&nbsp;'}</span></button>
+      <button class="crs-edit" data-edit="${c.id}" title="${T('editCourse')}" aria-label="${T('editCourse')} : ${esc(courseName(c))}">✎</button></div>`;
+  }).join('');
+  $('#home').innerHTML = `<div class="home-in">
+    <div class="home-hero"><div><h1>${T(now.getHours() >= 18 ? 'homeEvening' : 'homeHello')}</h1>
+      <p class="home-date">${now.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
+      <div class="home-quick">
+        <button class="home-q" data-h="prof"><span class="home-ic">${ICON('graduation-cap')}</span><span><b>${T('profSpace')}</b><span class="lbl-s">${T('homeProfD')}</span></span></button>
+        <button class="home-q" data-h="classes"><span class="home-ic">${ICON('class-lesson')}</span><span><b>${T('classes')}</b><span class="lbl-s">${T('homeClassesD')}</span></span></button>
+      </div></div>
+    <div class="home-h"><h2>${T('myCourses')}</h2><button class="btn" data-h="newCourse">+ ${T('newCourse')}</button></div>
+    <div class="home-grid">${cards}</div>
+    <p class="lbl-s home-hint">${T('homeHint')}</p>
+    <div class="home-foot"><div class="seg-top seg-side" role="group" aria-label="Langue / Sprache / Language / Lingua">${['fr', 'de', 'en', 'it'].map(l => `<button type="button" data-hlang="${l}" aria-pressed="${l === S.lang}">${l.toUpperCase()}</button>`).join('')}</div></div></div>`;
+}
+$('#home').addEventListener('click', e => {
+  const o = e.target.closest('[data-open]'); if (o) { openCourse(o.dataset.open); return; }
+  const ed = e.target.closest('[data-edit]'); if (ed) { editCourse(ed.dataset.edit); return; }
+  const hl = e.target.closest('[data-hlang]'); if (hl) { setLang(hl.dataset.hlang); return; }
+  const a = e.target.closest('[data-h]'); if (!a) return;
+  if (a.dataset.h === 'prof') { HOME = false; applyHome(); renderBoard(); renderTabs(); $('#btnProf').click(); }
+  if (a.dataset.h === 'classes') openClasses();
+  if (a.dataset.h === 'newCourse') editCourse(null);
+});
+$('#btnHome').onclick = () => { if (HOME) { HOME = false; applyHome(); renderBoard(); renderTabs(); } else goHome(); };
+$('#btnProf').addEventListener('click', () => { if (HOME) { HOME = false; applyHome(); renderBoard(); renderTabs(); } });
+function editCourse(id) {
+  const c = id ? courseById(id) : null, n = c ? S.pages.filter(p => p.course === c.id).length : 0;
+  let color = c ? c.color || 'rot' : COURSE_COLORS[S.courses.length % COURSE_COLORS.length];
+  openDlg(`<h2>${c ? T('editCourse') : T('newCourse')}</h2>
+    <label class="field"><span>${T('courseName')}</span><input class="inp" id="crsName" value="${esc(c ? c.name : '')}" placeholder="${c ? esc(courseName(c)) : T('courseNamePh')}"></label>
+    <div class="field"><span>${T('courseColor')}</span><div class="crs-cols" role="group" aria-label="${T('courseColor')}">${COURSE_COLORS.map(k => `<button type="button" class="crs-col" data-col="${k}" aria-pressed="${k === color}" style="background:var(--d-${k})" aria-label="${k}"></button>`).join('')}</div></div>
+    <label class="field"><span>${T('courseClass')}</span><select class="inp" id="crsCls"><option value="">${T('noneOpt')}</option>${S.classes.map(k => `<option value="${k.id}" ${c && c.classId === k.id ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select></label>
+    <div class="row row--end">${c && S.courses.length > 1 ? `<button class="btn btn--black" data-c="del">${T('deleteCourse')}</button><span style="flex:1"></span>` : ''}<button class="btn btn--ghost" data-act="closeDlg">${T('cancel')}</button><button class="btn" data-c="ok">${c ? T('save') : T('createCourse')}</button></div>`, body => {
+    const inp = $('#crsName', body); inp.focus();
+    inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('[data-c=ok]', body).click(); } };
+    body.onclick = async e => {
+      const col = e.target.closest('[data-col]'); if (col) { color = col.dataset.col; body.querySelectorAll('[data-col]').forEach(b => b.setAttribute('aria-pressed', b === col)); return; }
+      const b = e.target.closest('[data-c]'); if (!b) return;
+      if (b.dataset.c === 'ok') {
+        const name = inp.value.trim(), classId = $('#crsCls', body).value;
+        if (c) { c.name = name; c.color = color; c.classId = classId; delete c.auto; save(); closeDlg(); renderTabs(); if (HOME) renderHome(); return; }
+        const nc = { id: uid(), name: name || T('newCourse'), color, classId, created: Date.now() }; S.courses.push(nc); closeDlg(); openCourse(nc.id); return;
+      }
+      if (b.dataset.c === 'del') {
+        closeDlg(); if (!(await confirmBox(T('deleteCourseQ').replace('{n}', esc(courseName(c))).replace('{p}', n), T('deleteCourse')))) return;
+        const curId = (S.pages[S.current] || {}).id;
+        S.pages = S.pages.filter(p => p.course !== c.id); S.courses = S.courses.filter(x => x !== c);
+        if (!S.pages.length) newPage('', S.courses[0].id);
+        S.current = Math.max(0, S.pages.findIndex(p => p.id === curId)); save(); renderTabs(); if (HOME) renderHome(); else renderBoard();
+      }
+    };
+  });
+}
 $('#side').addEventListener('click', e => {
   const t = e.target.closest('[data-i]');
   if (t) { const i = +t.dataset.i; if (i === S.current) pageMenu(i); else { S.current = i; save(); renderBoard(); renderTabs(); if (matchMedia('(max-width: 760px)').matches) setSide(true); } return; }
@@ -1099,7 +1201,7 @@ function openCatalog() {
     if (sort === 'nameDesc') L.sort((a, b) => pageName(b.p, b.i).localeCompare(pageName(a.p, a.i), locale(), { numeric: true }));
     return L.length ? L.map(({ p, i }) => `<div class="cat-row ${i === S.current ? 'is-cur' : ''}">
       <button class="cat-pin" data-pin="${i}" aria-pressed="${isPinned(p)}" title="${T('pinTab')}" aria-label="${T('pinTab')} : ${esc(pageName(p, i))}">${isPinned(p) ? '★' : '☆'}</button>
-      <button class="cat-open" data-open="${i}"><b>${esc(pageName(p, i))}</b><span class="lbl-s">${T('nTools').replace('{n}', p.widgets.length)} · ${T('openedOn')} ${fmtD(p.opened)}</span>
+      <button class="cat-open" data-open="${i}"><b>${esc(pageName(p, i))}</b><span class="lbl-s">${esc(courseName(courseById(p.course)))} · ${T('nTools').replace('{n}', p.widgets.length)} · ${T('openedOn')} ${fmtD(p.opened)}</span>
         <span class="cat-ic">${[...new Set(p.widgets.map(w => w.type))].slice(0, 8).map(ty => WIDGETS[ty] ? ICON(WIDGETS[ty].icon) : '').join('')}</span></button>
       <button class="btn btn--ghost btn--s" data-dup="${i}">${T('duplicate')}</button>
       <button class="w-x" data-del="${i}" ${S.pages.length < 2 ? 'disabled' : ''} title="${T('deletePage')}" aria-label="${T('deletePage')} ${esc(pageName(p, i))}">×</button></div>`).join('')
@@ -1248,19 +1350,23 @@ dlg.addEventListener('click', e => { if (e.target === dlg) closeDlg(); if (e.tar
 function confirmBox(msg, okLabel) {
   return new Promise(res => {
     openDlg(`<h2>${T('confirm')}</h2><p>${msg}</p><div class="row row--end"><button class="btn btn--ghost" data-r="0">${T('cancel')}</button><button class="btn" data-r="1">${okLabel || T('ok')}</button></div>`, body => {
-      body.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { closeDlg(); res(b.dataset.r === '1'); });
+      body.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { dlg.removeEventListener('close', onClose); closeDlg(); res(b.dataset.r === '1'); });
     });
-    dlg.addEventListener('close', () => res(false), { once: true });
+    // un « close » en attente d'un dialogue précédent ne doit pas répondre « non » à la place de l'utilisateur
+    function onClose() { if (dlg.open) return; dlg.removeEventListener('close', onClose); res(false); }
+    dlg.addEventListener('close', onClose);
   });
 }
 
 function pageMenu(i) {
   const p = S.pages[i];
+  const sib = d => { for (let j = i + d; j >= 0 && j < S.pages.length; j += d) if (S.pages[j].course === p.course) return j; return -1; };
   openDlg(`<h2>${T('pageSettings')}</h2>
     <label class="field"><span>${T('pageName')}</span><input class="inp" id="pgName" value="${esc(p.name)}" placeholder="${esc(pageName(p, i))}"></label>
+    <label class="field"><span>${T('course')}</span><select class="inp" id="pgCourse">${S.courses.map(c => `<option value="${c.id}" ${c.id === p.course ? 'selected' : ''}>${esc(courseName(c))}</option>`).join('')}</select></label>
     <div class="row">
-      <button class="btn btn--ghost btn--s" data-m="left" ${i === 0 ? 'disabled' : ''}>← ${T('moveLeft')}</button>
-      <button class="btn btn--ghost btn--s" data-m="right" ${i === S.pages.length - 1 ? 'disabled' : ''}>${T('moveRight')} →</button>
+      <button class="btn btn--ghost btn--s" data-m="left" ${sib(-1) < 0 ? 'disabled' : ''}>↑ ${T('moveUp')}</button>
+      <button class="btn btn--ghost btn--s" data-m="right" ${sib(1) < 0 ? 'disabled' : ''}>↓ ${T('moveDown')}</button>
       <button class="btn btn--ghost btn--s" data-m="pin">${isPinned(p) ? '★ ' + T('unpinTab') : '☆ ' + T('pinTab')}</button>
       <button class="btn btn--ghost btn--s" data-m="dup">${T('duplicate')}</button>
       <button class="btn btn--ghost btn--s" data-m="tpl" ${p.widgets.length ? '' : 'disabled'}>${T('saveTpl')}</button>
@@ -1272,9 +1378,9 @@ function pageMenu(i) {
     inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('[data-m=ok]', body).click(); } };
     body.onclick = async e => {
       const b = e.target.closest('[data-m]'); if (!b) return;
-      p.name = inp.value.trim();
+      p.name = inp.value.trim(); p.course = $('#pgCourse', body).value || p.course;
       const m = b.dataset.m;
-      if (m === 'left' || m === 'right') { const j = m === 'left' ? i - 1 : i + 1;[S.pages[i], S.pages[j]] = [S.pages[j], S.pages[i]]; S.current = j; }
+      if (m === 'left' || m === 'right') { const j = sib(m === 'left' ? -1 : 1); if (j >= 0) { [S.pages[i], S.pages[j]] = [S.pages[j], S.pages[i]]; S.current = j; } }
       if (m === 'tpl') { save(); renderTabs(); saveAsTemplate(i); return; }
       if (m === 'pin') p.pinned = !isPinned(p);
       if (m === 'dup') { const c = JSON.parse(JSON.stringify(p)); c.id = uid(); c.name = (p.name || pageName(p, i)) + ' (2)'; c.widgets.forEach(w => w.id = uid()); S.pages.splice(i + 1, 0, c); S.current = i + 1; }
@@ -1451,7 +1557,7 @@ function importBoard(file) {
       const d = JSON.parse(r.result); if (d.app !== 'didac-tableau' || !d.state) throw new Error('format');
       closeDlg();
       if (!(await confirmBox(T('importQ')))) return;
-      S = d.state; S.classes = S.classes || []; S.presence = S.presence || {};
+      S = d.state; S.classes = S.classes || []; S.presence = S.presence || {}; ensureCourses();
       if (d.vault) LS.set('didac-tableau-vault', d.vault);
       if (d.docs && window.DidacDocs) await window.DidacDocs.importAll(d.docs);
       save(true); applyStatic(); renderTabs(); renderBoard();
@@ -1480,7 +1586,8 @@ window.DidacApp = {
   T, esc, cleanHTML, uid, h, $, LS, ICON, pad, todayISO, locale, download, exportPDF, openDlg, closeDlg, confirmBox, openClasses,
   get state() { return S; }, classById, save, addWidget, iconPicker, exportBoard,
   addPage(name) { const p = newPage(name); p.pinned = true; save(); renderTabs(); return p.id; },
-  goPage(id) { const i = S.pages.findIndex(p => p.id === id); if (i < 0) return; S.current = i; save(); renderTabs(); renderBoard(); }
+  goPage(id) { const i = S.pages.findIndex(p => p.id === id); if (i < 0) return; S.current = i; HOME = false; applyHome(); save(); renderTabs(); renderBoard(); },
+  pageLabel(p, j) { return (S.courses.length > 1 ? courseName(courseById(p.course)) + ' · ' : '') + pageName(p, j); }
 };
 
 if (S.sideHidden === undefined && matchMedia('(max-width: 760px)').matches) S.sideHidden = true;

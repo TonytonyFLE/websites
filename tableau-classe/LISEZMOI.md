@@ -101,3 +101,11 @@ pauses calculées automatiquement, fonctionne tous les jours. Choix gardé dans 
 - Pages dans un volet à gauche, masquable (bouton « Pages » en haut à gauche ou «) : épinglées ★ puis autres pages (récentes d'abord), filtre rapide, + page, catalogue. Le choix est mémorisé. Sur téléphone, le volet s'ouvre par-dessus le tableau.
 - Langue déplacée en bas du volet : le bandeau du haut ne garde que logo, claim, Classes, Espace prof, Plein écran.
 - Dé : points visibles avec plusieurs dés (marge intérieure proportionnelle), taille selon le nombre ; pièce : texte centré.
+
+## v1.10.0 (27.11.2026) : accueil + cours
+- Le site s'ouvre sur une page d'accueil : Espace prof, Classes, langue, et la grille « Mes cours ».
+- Cours = ensemble de pages (S.courses : nom, couleur Didac, classe liée facultative ; page.course).
+  Les anciennes pages sans cours vont dans « Mes pages » (cours auto, renommable).
+- Volet de gauche : sélecteur du cours + pages de ce cours seulement ; le filtre montre aussi les résultats des autres cours.
+- Réglages de page : choix du cours (déplacer), Monter / Descendre dans le cours. Supprimer un cours supprime ses pages (confirmation).
+- Correctif : confirmBox répondait « non » toute seule après un autre dialogue (supprimer / vider une page depuis le menu de page).
