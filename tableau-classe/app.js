@@ -805,6 +805,111 @@ const WIDGETS = {
     }
   },
 
+  /* ----- Symboles de travail : volume, forme sociale, activité (icônes Didac) ----- */
+  work: {
+    icon: 'chat-two-bubbles-oval', w: 560, h: 300, compact: true, init: () => ({ vol: 0, soc: 0, act: null, compact: false }),
+    mount(b, wd) {
+      const st = wd.state;
+      const CATS = [
+        ['vol', T('wkVolume'), [['ear-hearing', 'wk_silence'], ['chat-bubble-oval', 'wk_whisper'], ['chat-two-bubbles-oval', 'wk_talk']]],
+        ['soc', T('wkSocial'), [['user-single-neutral-male', 'wk_alone'], ['user-multiple-group', 'wk_pairs'], ['collaborations-idea', 'wk_group'], ['class-lesson', 'wk_plenum']]],
+        ['act', T('wkActivity'), [['ear-hearing', 'wk_listen'], ['book-reading', 'wk_read'], ['pencil', 'wk_write'], ['politics-speech', 'wk_speak'], ['magnifying-glass', 'wk_search'], ['computer-pc-desktop', 'wk_computer'], ['help-question-1', 'wk_ask']]]];
+      function render() {
+        const shown = CATS.filter(([k]) => st[k] !== null && st[k] !== undefined);
+        b.innerHTML = `<div class="wk-tiles">${shown.length ? shown.map(([k, , L]) => { const [ic, lb] = L[st[k]] || L[0];
+            return `<button class="wk-tile" data-cycle="${k}" title="${T('wkCycle')}">${ICON(ic)}<span>${T(lb)}</span></button>`; }).join('') : `<p class="lbl-s">${T('wkNone')}</p>`}</div>
+          <div class="wk-pick full-only">${CATS.map(([k, name, L]) => `<div class="wk-row"><span class="lbl-s">${name}</span>
+            <button class="wk-opt" data-set="${k}|" aria-pressed="${st[k] === null}">—</button>${L.map(([ic, lb], i) => `<button class="wk-opt" data-set="${k}|${i}" aria-pressed="${st[k] === i}" title="${T(lb)}" aria-label="${T(lb)}">${ICON(ic)}</button>`).join('')}</div>`).join('')}</div>`;
+      }
+      b.addEventListener('click', e => {
+        const s = e.target.closest('[data-set]'); if (s) { const [k, v] = s.dataset.set.split('|'); st[k] = v === '' ? null : +v; save(); render(); return; }
+        const c = e.target.closest('[data-cycle]'); if (c) { const k = c.dataset.cycle, L = CATS.find(x => x[0] === k)[2]; st[k] = (st[k] + 1) % L.length; save(); render(); }
+      });
+      render();
+    }
+  },
+
+  /* ----- Feu tricolore ----- */
+  light: {
+    glyph: '●', w: 260, h: 420, compact: true, init: () => ({ on: 2, labels: ['', '', ''], compact: false }),
+    mount(b, wd) {
+      const st = wd.state; st.labels = st.labels || ['', '', ''];
+      const COLS = ['rot', 'gelb', 'gruen'], DEF = ['tl_red', 'tl_yellow', 'tl_green'];
+      function render() {
+        b.innerHTML = `<div class="tl"><div class="tl-box">${COLS.map((c, i) => `<button class="tl-lamp tl-${c} ${st.on === i ? 'is-on' : ''}" data-lamp="${i}" aria-pressed="${st.on === i}" aria-label="${esc(st.labels[i] || T(DEF[i]))}"></button>`).join('')}</div>
+          ${st.on !== null && st.labels[st.on] ? `<div class="tl-cap">${esc(st.labels[st.on])}</div>` : ''}</div>
+          <div class="tl-edit full-only">${COLS.map((c, i) => `<label class="tl-in"><span class="sw" style="background:var(--d-${c})"></span><input class="inp" data-lbl="${i}" value="${esc(st.labels[i])}" placeholder="${T('tlCaption')}" aria-label="${T('tlCaption')} ${T(DEF[i])}"></label>`).join('')}</div>`;
+      }
+      b.addEventListener('click', e => { const l = e.target.closest('[data-lamp]'); if (l) { const i = +l.dataset.lamp; st.on = st.on === i ? null : i; save(); render(); } });
+      b.addEventListener('input', e => { const i = e.target.dataset.lbl; if (i !== undefined) { st.labels[+i] = e.target.value; save(); const cap = $('.tl-cap', b); if (+i === st.on) { if (cap) cap.textContent = e.target.value; else render(); } } });
+      render();
+    }
+  },
+
+  /* ----- Devoirs : repris de l'agenda (copie non chiffrée des textes de devoirs) ----- */
+  homework: {
+    icon: 'book-reading', w: 480, h: 320, compact: true, init: () => ({ classId: '', compact: false }),
+    mount(b, wd) {
+      const st = wd.state;
+      function render() {
+        const all = S.homework || [], today = todayISO();
+        const L0 = all.filter(h => !st.classId || h.classId === st.classId);
+        // devoirs « en cours » : depuis la dernière leçon passée (ou d'aujourd'hui) + les suivants planifiés
+        const past = L0.filter(h => h.date <= today), start = past.length ? past[past.length - 1].date : today;
+        const L = L0.filter(h => h.date >= start).slice(0, 6);
+        const fmt = d => new Date(d + 'T12:00:00').toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' });
+        const classes = [...new Map(all.filter(h => h.classId).map(h => [h.classId, h.cls])).entries()];
+        b.innerHTML = `<div class="ctl full-only"><select class="inp" data-role="cls" aria-label="${T('class')}"><option value="">${T('allClasses')}</option>${classes.map(([id, n]) => `<option value="${id}" ${id === st.classId ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+          <div class="hw-list">${L.length ? L.map(h => `<div class="hw-item ${h.date === today ? 'is-today' : h.date > today ? 'is-next' : ''}"><div class="hw-top"><b>${T('hwGiven')} ${fmt(h.date)}</b>${!st.classId && h.cls ? `<span class="tag">${esc(h.cls)}</span>` : ''}${h.topic ? `<span class="lbl-s">${esc(h.topic)}</span>` : ''}</div><div class="rt">${cleanHTML(h.html)}</div></div>`).join('')
+            : `<div class="big"><p class="lbl-s">${T('hwEmpty')}</p></div>`}</div>`;
+      }
+      b.addEventListener('change', e => { if (e.target.dataset.role === 'cls') { st.classId = e.target.value; save(); render(); } });
+      window.addEventListener('didac-homework', render);
+      render();
+      return () => window.removeEventListener('didac-homework', render);
+    }
+  },
+
+  /* ----- Sondage rapide : l'enseignant·e compte les mains levées ----- */
+  poll: {
+    icon: 'politics-vote-2', w: 520, h: 340, compact: true, init: () => ({ kind: 'thumbs', q: '', labels: ['A', 'B', 'C', 'D'], counts: [0, 0, 0, 0], hide: false, compact: false }),
+    mount(b, wd) {
+      const st = wd.state;
+      const SURF = ['gelb', 'blau', 'gruen', 'orange'];
+      const opts = () => st.kind === 'thumbs' ? [['like-1', T('pl_yes')], ['help-question-1', T('pl_unsure')], ['sad-face', T('pl_no')]]
+        : st.kind === 'yn' ? [['like-1', T('pl_yes')], ['sad-face', T('pl_no')]] : st.labels.map(l => [null, l]);
+      let lastVote = [];
+      function render() {
+        const O = opts(), C = O.map((_, i) => st.counts[i] || 0), tot = C.reduce((a, c) => a + c, 0), mx = Math.max(1, ...C);
+        b.innerHTML = `<input class="pl-q" data-role="q" value="${esc(st.q)}" placeholder="${T('pollQ')}" aria-label="${T('pollQ')}">
+          <div class="pl-bars">${O.map(([ic, lb], i) => `<button class="pl-opt" data-vote="${i}" title="${T('pollAdd')}">
+            <span class="pl-track"><span class="pl-bar" style="height:${st.hide ? 0 : C[i] / mx * 100}%;background:var(--d-${SURF[i]})"></span></span>
+            <span class="pl-n">${st.hide ? '?' : C[i]}</span><span class="pl-lb">${ic ? ICON(ic) : ''}<span>${esc(lb)}</span></span></button>`).join('')}</div>
+          <div class="ctl"><span class="lbl-s">${T('pollTotal').replace('{n}', tot)}</span><span style="flex:1"></span>
+            <button class="btn btn--ghost btn--s" data-act="hide">${st.hide ? T('pollShow') : T('pollHide')}</button>
+            <button class="btn btn--ghost btn--s" data-act="undo" ${tot ? '' : 'disabled'} aria-label="${T('pollUndo')}" title="${T('pollUndo')}">−1</button>
+            <button class="btn btn--ghost btn--s" data-act="reset">${T('reset')}</button></div>
+          <div class="ctl full-only"><div class="seg-s" role="group" aria-label="${T('pollKind')}">${['thumbs', 'yn', 'abcd'].map(k => `<button data-kind="${k}" aria-pressed="${st.kind === k}">${T('pk_' + k)}</button>`).join('')}</div>
+            ${st.kind === 'abcd' ? st.labels.map((l, i) => `<input class="inp pl-in" data-lbl="${i}" value="${esc(l)}" aria-label="${T('pollOption')} ${i + 1}">`).join('') : ''}</div>`;
+      }
+      b.addEventListener('click', e => {
+        const v = e.target.closest('[data-vote]'); if (v) { const i = +v.dataset.vote; st.counts[i] = (st.counts[i] || 0) + 1; lastVote.push(i); save(); render(); return; }
+        const k = e.target.closest('[data-kind]'); if (k) { st.kind = k.dataset.kind; st.counts = [0, 0, 0, 0]; lastVote = []; save(); render(); return; }
+        const a = e.target.closest('[data-act]'); if (!a) return;
+        if (a.dataset.act === 'hide') st.hide = !st.hide;
+        if (a.dataset.act === 'reset') { st.counts = [0, 0, 0, 0]; lastVote = []; }
+        if (a.dataset.act === 'undo') { const i = lastVote.length ? lastVote.pop() : st.counts.findIndex(c => c > 0); if (i >= 0 && st.counts[i] > 0) st.counts[i]--; }
+        save(); render();
+      });
+      b.addEventListener('input', e => {
+        if (e.target.dataset.role === 'q') { st.q = e.target.value; save(); }
+        const i = e.target.dataset.lbl;
+        if (i !== undefined) { st.labels[+i] = e.target.value; save(); const lb = b.querySelectorAll('.pl-lb span')[+i]; if (lb) lb.textContent = e.target.value; }
+      });
+      render();
+    }
+  },
+
   /* ----- Image ----- */
   image: {
     glyph: 'IMG', w: 480, h: 360, init: () => ({ src: '' }),
@@ -819,7 +924,7 @@ const WIDGETS = {
     }
   }
 };
-const ORDER = ['clock', 'timer', 'schedule', 'stopwatch', 'random', 'flash', 'groups', 'dice', 'countdown', 'plan', 'text', 'sticker', 'image', 'calc', 'draw'];
+const ORDER = ['clock', 'timer', 'schedule', 'stopwatch', 'random', 'flash', 'groups', 'dice', 'countdown', 'plan', 'homework', 'work', 'light', 'poll', 'text', 'sticker', 'image', 'calc', 'draw'];
 
 /* ---------- Choix d'une icône Didac (planning, stickers) ---------- */
 function iconPicker(current, onPick) {
@@ -866,6 +971,26 @@ function evalExpr(src) {
   const v = expr(); if (i < s.length || !isFinite(v)) throw new Error('syntax'); return v;
 }
 function fmtNum(v) { return String(parseFloat(v.toPrecision(12))); }
+
+/* ---------- Texte enrichi sûr (gras + surlignage Didac), partagé avec l'espace prof ---------- */
+const ALLOWED = new Set(['b', 'strong', 'i', 'em', 'u', 'br', 'div', 'p', 'span', 'ul', 'ol', 'li']);
+function cleanHTML(html) {
+  html = String(html || '');
+  if (!/[<>]/.test(html)) html = esc(html).replace(/\n/g, '<br>');
+  const doc = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html'); const root0 = doc.body.firstChild;
+  (function walk(n) {
+    for (const c of [...n.childNodes]) {
+      if (c.nodeType === 3) continue;
+      if (c.nodeType !== 1) { c.remove(); continue; }
+      const tag = c.tagName.toLowerCase();
+      if (['script', 'style', 'iframe', 'object', 'img', 'svg'].includes(tag)) { c.remove(); continue; }
+      walk(c);
+      if (!ALLOWED.has(tag)) { c.replaceWith(...c.childNodes); continue; }
+      for (const a of [...c.attributes]) if (!(a.name === 'class' && /^hl-(gelb|blau|gruen|orange|pink)$/.test(a.value))) c.removeAttribute(a.name);
+    }
+  })(root0);
+  return root0.innerHTML;
+}
 
 /* ---------- Export PDF (impression navigateur → « Enregistrer en PDF ») ---------- */
 function exportPDF(html, title) {
@@ -945,7 +1070,7 @@ function openCatalog() {
   openDlg(`<h2>${T('allPages')} (${S.pages.length})</h2>
     <div class="row"><input class="inp" type="search" id="catQ" placeholder="${T('pageSearchPh')}" aria-label="${T('search')}" style="flex:1;min-width:180px">
       <select class="inp" id="catSort" aria-label="${T('sortBy')}">${['recent', 'name', 'nameDesc', 'order'].map(k => `<option value="${k}" ${k === sort ? 'selected' : ''}>${T('sort_' + k)}</option>`).join('')}</select>
-      <button class="btn" data-act="catNew">+ ${T('addPage')}</button></div>
+      <button class="btn btn--ghost" data-act="catTpl">${T('fromTemplate')}</button><button class="btn" data-act="catNew">+ ${T('addPage')}</button></div>
     <p class="lbl-s" style="margin:0">${T('catHint')}</p>
     <div class="cat-list" id="catList">${list()}</div>
     <div class="row row--end"><button class="btn btn--ghost" data-act="closeDlg">${T('close')}</button></div>`, body => {
@@ -962,6 +1087,7 @@ function openCatalog() {
       const x = t.closest('[data-del]'); if (x) { const i = +x.dataset.del, p = S.pages[i];
         if (await confirmBox(T('deletePageQ').replace('{p}', esc(pageName(p, i))), T('deletePage'))) { S.pages.splice(i, 1); if (S.current >= i) S.current = Math.max(0, S.current - 1); save(); renderBoard(); renderTabs(); }
         openCatalog(); return; }
+      if (t.closest('[data-act=catTpl]')) { openTemplates(); return; }
       if (t.closest('[data-act=catNew]')) { const p = newPage(inp.value.trim()); go(S.pages.indexOf(p)); }
     };
   }, true);
@@ -1089,6 +1215,7 @@ function pageMenu(i) {
       <button class="btn btn--ghost btn--s" data-m="right" ${i === S.pages.length - 1 ? 'disabled' : ''}>${T('moveRight')} →</button>
       <button class="btn btn--ghost btn--s" data-m="pin">${isPinned(p) ? '★ ' + T('unpinTab') : '☆ ' + T('pinTab')}</button>
       <button class="btn btn--ghost btn--s" data-m="dup">${T('duplicate')}</button>
+      <button class="btn btn--ghost btn--s" data-m="tpl" ${p.widgets.length ? '' : 'disabled'}>${T('saveTpl')}</button>
       <button class="btn btn--ghost btn--s" data-m="clear">${T('clearPage')}</button>
       <button class="btn btn--black btn--s" data-m="del" ${S.pages.length < 2 ? 'disabled' : ''}>${T('deletePage')}</button>
     </div>
@@ -1100,6 +1227,7 @@ function pageMenu(i) {
       p.name = inp.value.trim();
       const m = b.dataset.m;
       if (m === 'left' || m === 'right') { const j = m === 'left' ? i - 1 : i + 1;[S.pages[i], S.pages[j]] = [S.pages[j], S.pages[i]]; S.current = j; }
+      if (m === 'tpl') { save(); renderTabs(); saveAsTemplate(i); return; }
       if (m === 'pin') p.pinned = !isPinned(p);
       if (m === 'dup') { const c = JSON.parse(JSON.stringify(p)); c.id = uid(); c.name = (p.name || pageName(p, i)) + ' (2)'; c.widgets.forEach(w => w.id = uid()); S.pages.splice(i + 1, 0, c); S.current = i + 1; }
       if (m === 'clear') { closeDlg(); if (await confirmBox(T('clearPageQ'))) { p.widgets = []; } }
@@ -1107,6 +1235,106 @@ function pageMenu(i) {
       closeDlg(); save(); renderTabs(); renderBoard();
     };
   });
+}
+
+/* ---------- Modèles de pages : fournis + enregistrés par chaque prof ----------
+   Positions en fractions du tableau (x, y, w, h entre 0 et 1) pour s'adapter à tous les écrans. */
+const BUILTIN_TPL = [
+  { id: 'b-input', name: 'tpl_input', desc: 'tpl_input_d', widgets: [
+    ['plan', .02, .03, .30, .62, () => ({ title: T('tpl_input'), mode: 'check', items: [{ t: T('tpl_i1'), d: false, icon: 'ear-hearing' }, { t: T('tpl_i2'), d: false, icon: 'collaborations-idea' }, { t: T('tpl_i3'), d: false, icon: 'chat-two-bubbles-oval' }, { t: T('tpl_i4'), d: false, icon: 'book-reading' }] })],
+    ['timer', .34, .03, .30, .40, () => ({ dur: 600, remaining: 600 })],
+    ['work', .66, .03, .32, .40, () => ({ vol: 0, soc: 0, act: 0 })],
+    ['homework', .34, .47, .40, .48, () => ({})],
+    ['clock', .76, .47, .22, .30, () => ({})]] },
+  { id: 'b-groups', name: 'tpl_groups', desc: 'tpl_groups_d', widgets: [
+    ['groups', .02, .03, .50, .70, () => ({})],
+    ['timer', .54, .03, .26, .40, () => ({ dur: 1200, remaining: 1200 })],
+    ['light', .82, .03, .16, .60, () => ({ on: 2 })],
+    ['work', .54, .47, .26, .40, () => ({ vol: 1, soc: 2, act: null })]] },
+  { id: 'b-start', name: 'tpl_start', desc: 'tpl_start_d', widgets: [
+    ['clock', .02, .03, .26, .34, () => ({})],
+    ['schedule', .02, .41, .34, .54, () => ({})],
+    ['plan', .38, .03, .30, .62, () => ({ title: T('tpl_today'), mode: 'list', items: [] })],
+    ['homework', .70, .03, .28, .50, () => ({})],
+    ['random', .70, .57, .28, .38, () => ({})]] },
+  { id: 'b-vocab', name: 'tpl_vocab', desc: 'tpl_vocab_d', widgets: [
+    ['flash', .02, .03, .48, .62, () => ({})],
+    ['random', .52, .03, .30, .45, () => ({ classId: '__list' })],
+    ['timer', .52, .52, .30, .40, () => ({ dur: 300, remaining: 300 })]] },
+  { id: 'b-test', name: 'tpl_test', desc: 'tpl_test_d', widgets: [
+    ['clock', .02, .03, .30, .40, () => ({})],
+    ['timer', .34, .03, .36, .50, () => ({ dur: 2700, remaining: 2700 })],
+    ['work', .72, .03, .26, .40, () => ({ vol: 0, soc: 0, act: 2 })],
+    ['light', .02, .47, .14, .48, () => ({ on: 0 })],
+    ['text', .18, .57, .52, .38, () => ({})]] }];
+function boardBox() { const r = board.getBoundingClientRect(); return { W: Math.max(600, r.width), H: Math.max(400, r.height) }; }
+function pageFromTemplate(tpl) {
+  const { W, H } = boardBox();
+  const p = newPage(tpl.builtin ? T(tpl.name) : tpl.name); p.bg = tpl.bg || 'blanc'; if (tpl.bgImg) p.bgImg = tpl.bgImg;
+  p.widgets = tpl.widgets.filter(w => WIDGETS[w[0]]).map(([type, x, y, w, h, st]) => {
+    const wd = { id: uid(), type, x: Math.round(x * W), y: Math.round(y * H), w: Math.round(w * W), h: Math.round(h * H), z: ++S.z,
+      state: Object.assign(WIDGETS[type].init(), typeof st === 'function' ? st() : JSON.parse(JSON.stringify(st || {}))) };
+    clampBox(wd); return wd;
+  });
+  return p;
+}
+function saveAsTemplate(i) {
+  const p = S.pages[i], { W, H } = boardBox();
+  openDlg(`<h2>${T('saveTpl')}</h2>
+    <label class="field"><span>${T('tplName')}</span><input class="inp" id="tplName" value="${esc(p.name || '')}" required></label>
+    <p class="lbl-s" style="margin:0">${T('saveTplHint')}</p>
+    <div class="row row--end"><button class="btn btn--ghost" data-act="closeDlg">${T('cancel')}</button><button class="btn" id="tplOk">${T('save')}</button></div>`, body => {
+    const inp = $('#tplName', body); inp.focus(); inp.select();
+    const ok = () => {
+      const name = inp.value.trim() || pageName(p, i);
+      // l'état des widgets est copié, sauf les résultats du moment (tirages, votes, chronos en cours)
+      const reset = { random: { drawn: [], last: null }, poll: { counts: [0, 0, 0, 0] }, timer: { endAt: null }, stopwatch: { start: null, acc: 0, laps: [] }, flash: { pos: 0, known: [], flipped: false } };
+      const widgets = p.widgets.map(w => [w.type, +(w.x / W).toFixed(3), +(w.y / H).toFixed(3), +(w.w / W).toFixed(3), +(w.h / H).toFixed(3), Object.assign(JSON.parse(JSON.stringify(w.state || {})), reset[w.type] || {})]);
+      S.templates = S.templates || []; S.templates.push({ id: uid(), name, bg: p.bg, bgImg: p.bg === 'image' ? p.bgImg : undefined, widgets, created: Date.now() });
+      if (!save(true)) { S.templates.pop(); alertBox(T('storageFull')); return; }
+      closeDlg(); toast(T('tplSaved').replace('{n}', esc(name)));
+    };
+    $('#tplOk', body).onclick = ok; inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); ok(); } };
+  });
+}
+function openTemplates() {
+  const icons = t => [...new Set(t.widgets.map(w => w[0]))].filter(ty => WIDGETS[ty]).slice(0, 7).map(ty => WIDGETS[ty].icon ? ICON(WIDGETS[ty].icon) : `<span class="glyph">${WIDGETS[ty].glyph}</span>`).join('');
+  const card = (t, mine) => `<div class="tpl-card"><button class="tpl-use" data-tpl="${t.id}"><b>${esc(mine ? t.name : T(t.name))}</b><span class="lbl-s">${mine ? T('nTools').replace('{n}', t.widgets.length) : T(t.desc)}</span><span class="cat-ic">${icons(t)}</span></button>
+    ${mine ? `<button class="w-x" data-tpldel="${t.id}" title="${T('delete')}" aria-label="${T('delete')} ${esc(t.name)}">×</button>` : ''}</div>`;
+  const mine = S.templates || [];
+  openDlg(`<h2>${T('templates')}</h2>
+    <p class="lbl-s" style="margin:0">${T('templatesHint')}</p>
+    <h3 class="tpl-h">${T('tplBuiltin')}</h3><div class="tpl-grid">${BUILTIN_TPL.map(t => card(t, false)).join('')}</div>
+    <h3 class="tpl-h">${T('tplMine')}</h3>${mine.length ? `<div class="tpl-grid">${mine.map(t => card(t, true)).join('')}</div>` : `<p class="lbl-s" style="margin:0">${T('tplMineEmpty')}</p>`}
+    <div class="row row--end"><button class="btn btn--ghost" data-act="closeDlg">${T('close')}</button></div>`, body => {
+    body.onclick = async e => {
+      const u = e.target.closest('[data-tpl]');
+      if (u) { const id = u.dataset.tpl, b0 = BUILTIN_TPL.find(t => t.id === id), t = b0 ? Object.assign({ builtin: true }, b0) : mine.find(x => x.id === id); if (!t) return;
+        closeDlg(); pageFromTemplate(t); S.current = S.pages.length - 1; save(); renderBoard(); renderTabs(); return; }
+      const d = e.target.closest('[data-tpldel]');
+      if (d) { const t = mine.find(x => x.id === d.dataset.tpldel); if (t && await confirmBox(T('tplDelQ').replace('{n}', esc(t.name)), T('delete'))) { S.templates = S.templates.filter(x => x !== t); save(); } openTemplates(); }
+    };
+  }, true);
+}
+
+/* ---------- Rappel de sauvegarde (toutes les données vivent dans ce navigateur) ---------- */
+const BACKUP_DAYS = 14, DAY = 864e5;
+function toast(html, actions) {
+  let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  t.innerHTML = `<span>${html}</span>${(actions || []).map((a, i) => `<button class="btn btn--s ${i ? 'btn--ghost' : ''}" data-ti="${i}">${a[0]}</button>`).join('')}${actions ? '' : ''}`;
+  t.hidden = false; clearTimeout(t._h);
+  t.onclick = e => { const b = e.target.closest('[data-ti]'); if (b) { t.hidden = true; actions[+b.dataset.ti][1](); } };
+  if (!actions) t._h = setTimeout(() => { t.hidden = true; }, 3500);
+}
+function hasData() { return S.classes.length > 0 || S.pages.some(p => p.widgets.length) || !!LS.get('didac-tableau-vault', null); }
+function checkBackup() {
+  const now = Date.now(); S.since = S.since || now;
+  if (!hasData() || (S.backupSnooze || 0) > now) return;
+  const last = S.lastBackup || 0, ref = last || S.since;
+  if (now - ref < BACKUP_DAYS * DAY) return;
+  const days = Math.floor((now - (last || S.since)) / DAY);
+  toast(last ? T('backupOld').replace('{n}', days) : T('backupNever'),
+    [[T('backupNow'), () => exportBoard()], [T('later'), () => { S.backupSnooze = now + 7 * DAY; save(); }]]);
 }
 
 /* ---------- Gestion des classes ---------- */
@@ -1163,6 +1391,7 @@ function download(name, text, type = 'application/json') {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 async function exportBoard() {
+  S.lastBackup = Date.now(); S.backupSnooze = 0; save();
   const data = { app: 'didac-tableau', v: 1, date: new Date().toISOString(), state: S, vault: LS.get('didac-tableau-vault', null), docs: window.DidacDocs ? await window.DidacDocs.exportAll() : [] };
   download(`didac-tableau-${todayISO()}.json`, JSON.stringify(data));
 }
@@ -1193,11 +1422,13 @@ let rzT; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setT
 
 /* ---------- API partagée avec prof.js ---------- */
 window.DidacApp = {
-  T, esc, uid, h, $, LS, ICON, pad, todayISO, locale, download, exportPDF, openDlg, closeDlg, confirmBox, openClasses,
-  get state() { return S; }, classById, save, addWidget, iconPicker,
+  T, esc, cleanHTML, uid, h, $, LS, ICON, pad, todayISO, locale, download, exportPDF, openDlg, closeDlg, confirmBox, openClasses,
+  get state() { return S; }, classById, save, addWidget, iconPicker, exportBoard,
   addPage(name) { const p = newPage(name); p.pinned = true; save(); renderTabs(); return p.id; },
   goPage(id) { const i = S.pages.findIndex(p => p.id === id); if (i < 0) return; S.current = i; save(); renderTabs(); renderBoard(); }
 };
 
 applyStatic(); renderTabs(); renderBoard();
+setTimeout(checkBackup, 4000);
+$('#emptyTpl').addEventListener('click', openTemplates);
 })();

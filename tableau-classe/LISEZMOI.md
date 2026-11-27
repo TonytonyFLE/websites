@@ -65,3 +65,15 @@ Widget « Horaire auto » (facultatif) : enchaîne cours → pause → cours sel
 - Tirage au sort : source « Liste libre » (un élément par ligne), sans répétition possible.
 - Widget Flashcards : une carte par ligne « recto ; verso » (aussi tabulation, « = » ou « - »), mode recto seul ou recto-verso,
   mélanger, commencer par le verso, « Je sais » retire la carte de la série, flèches et espace au clavier.
+
+## v1.6 (27.11.2026) : nouveaux outils, modèles de pages, rappel de sauvegarde
+- Consignes de travail (volume, forme sociale, activité, icônes Didac ; clic sur une tuile = suivante).
+- Feu tricolore (Didac Rot / Gelb / Grün, texte facultatif par couleur).
+- Devoirs : reprend les devoirs de l'agenda (de la dernière leçon passée aux suivantes), par classe ou toutes.
+  Copie non chiffrée des textes de devoirs seulement (S.homework, fenêtre −21 / +60 jours), mise à jour à chaque enregistrement de l'agenda.
+- Sondage : Oui / ? / Non, Oui / Non ou A B C D, l'enseignant·e clique pour compter les mains levées, masquer, −1, remettre.
+- Modèles de pages : 5 modèles Didac (Input + macro-tâche, Travail en groupes, Début de cours, Vocabulaire, Test),
+  « Enregistrer comme modèle » dans le menu de la page active, « Mes modèles » (positions relatives à l'écran).
+  Accès : catalogue ▦ › « Partir d'un modèle », ou page vide.
+- Rappel de sauvegarde : après 14 jours sans sauvegarde (ou jamais), bandeau « Sauvegarder maintenant / Plus tard » (7 jours).
+- Poids : ~360 Ko (≈ 140 Ko compressés), 9 requêtes, ~0,5 s à 10 Mbit/s.

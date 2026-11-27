@@ -38,7 +38,17 @@ function mirrorSchedule() {
   if (JSON.stringify(S.schedule) === JSON.stringify(next)) return;
   S.schedule = next; A.save(); window.dispatchEvent(new Event('didac-schedule'));
 }
-function saveSoon() { clearTimeout(saveT); saveT = setTimeout(() => { persist(); mirrorSchedule(); }, 400); }
+/* Devoirs visibles sur le tableau sans mot de passe (widget « Devoirs ») : textes de devoirs seulement, sans données d'élèves */
+function mirrorHomework() {
+  if (!D || !D.lessons) return;
+  const from = addDays(todayISO(), -21), to = addDays(todayISO(), 60), S = A.state;
+  const next = D.lessons.filter(l => l.homework && plain(l.homework).trim() && l.date >= from && l.date <= to)
+    .map(l => ({ date: l.date, time: l.time || '', classId: l.classId || '', cls: (A.classById(l.classId) || {}).name || '', topic: l.topic || '', html: cleanHTML(l.homework) }))
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  if (JSON.stringify(S.homework || []) === JSON.stringify(next)) return;
+  S.homework = next; A.save(); window.dispatchEvent(new Event('didac-homework'));
+}
+function saveSoon() { clearTimeout(saveT); saveT = setTimeout(() => { persist(); mirrorSchedule(); mirrorHomework(); }, 400); }
 async function unlock(pw) {
   const v = LS.get(VKEY, null); if (!v) return false;
   try {
@@ -207,24 +217,7 @@ function lessonCard(l) {
 
 /* ----- Texte enrichi (gras + surlignage couleur) pour objectifs, devoirs, remarques ----- */
 const HL = ['gelb', 'blau', 'gruen', 'orange', 'pink'];
-const ALLOWED = new Set(['b', 'strong', 'i', 'em', 'u', 'br', 'div', 'p', 'span', 'ul', 'ol', 'li']);
-function cleanHTML(html) {
-  html = String(html || '');
-  if (!/[<>]/.test(html)) html = esc(html).replace(/\n/g, '<br>');
-  const doc = new DOMParser().parseFromString('<div>' + html + '</div>', 'text/html'); const root0 = doc.body.firstChild;
-  (function walk(n) {
-    for (const c of [...n.childNodes]) {
-      if (c.nodeType === 3) continue;
-      if (c.nodeType !== 1) { c.remove(); continue; }
-      const tag = c.tagName.toLowerCase();
-      if (['script', 'style', 'iframe', 'object', 'img', 'svg'].includes(tag)) { c.remove(); continue; }
-      walk(c);
-      if (!ALLOWED.has(tag)) { c.replaceWith(...c.childNodes); continue; }
-      for (const a of [...c.attributes]) if (!(a.name === 'class' && /^hl-(gelb|blau|gruen|orange|pink)$/.test(a.value))) c.removeAttribute(a.name);
-    }
-  })(root0);
-  return root0.innerHTML;
-}
+const cleanHTML = A.cleanHTML;
 const rich = html => cleanHTML(html);
 const plain = html => { const d = document.createElement('div'); d.innerHTML = cleanHTML(html); return d.textContent || ''; };
 function rtField(name, label, val, ph) {
@@ -1003,7 +996,7 @@ function bind() {
     if (act === 'clEdit') { ui.clEdit = !ui.clEdit; render(); }
     if (act === 'clReset') { if (await A.confirmBox(T('clResetQ'))) { D.checklist.template = defaultTemplate(); saveSoon(); render(); } }
     if (act === 'clUncheck') { delete D.checklist.done[ui.clDate + '|' + (ui.cls || '')]; saveSoon(); render(); }
-    if (act === 'backup') { await persist(); const S = A.state; A.download(`didac-tableau-${todayISO()}.json`, JSON.stringify({ app: 'didac-tableau', v: 1, date: new Date().toISOString(), state: S, vault: LS.get(VKEY, null), docs: await window.DidacDocs.exportAll() })); }
+    if (act === 'backup') { await persist(); await A.exportBoard(); }
     if (act === 'wipe') { if (await A.confirmBox(T('wipeQ'), T('wipe'))) { localStorage.removeItem(VKEY); try { await idbClear(); } catch (e) { } key = null; D = null; render(); } }
   });
 }
