@@ -81,3 +81,4 @@ Widget « Horaire auto » (facultatif) : enchaîne cours → pause → cours sel
 ## v1.7 (27.11.2026) : barre d'outils masquable
 Bouton « Masquer » à gauche de la barre du bas : le tableau prend toute la hauteur ; un bouton discret « Outils »
 en bas à droite la fait revenir. Le choix est mémorisé.
+À chaque publication, augmenter le numéro « ?v=… » des fichiers CSS/JS dans index.html, sinon les navigateurs gardent l'ancienne version en cache.
