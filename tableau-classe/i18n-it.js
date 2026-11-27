@@ -23,7 +23,7 @@ window.DIDAC_I18N.it = {
   csvRules_checklist: 'Una riga per compito. sezione: preparazione, durante o seguito.',
   aiPrompt: 'Stai preparando un file CSV per la lavagna di classe Didac ({what}).\nRegole:\n- Rispondi solo con il contenuto CSV, senza testo intorno e senza blocco di codice.\n- Separatore: punto e virgola (;). Codifica UTF-8.\n- Prima riga, esattamente: {cols}\n- {rules}\n- Metti tra virgolette una cella che contiene un punto e virgola.\n\nEsempio:\n{ex}\n\nEcco le mie informazioni:\n[incolla qui il tuo piano semestrale, il tuo elenco, le tue date…]',
   w_schedule: 'Orario automatico', pauseLbl: 'Pausa', nextUp: 'Poi:', noLessonToday: 'Nessuna lezione oggi', dayOver: 'Le lezioni di oggi sono finite', beforeFirst: 'Le lezioni iniziano tra',
-  schMine: 'Le mie lezioni (orario)', schAll: 'Tutte le unità Didac', sound: 'Suono',
+  schMine: 'Le mie lezioni (orario)', schAll: 'Tutte le unità Didac', schPick: 'Unità scelte', schPickHint: 'Clicca sulle tue unità:', sound: 'Suono',
   schHint: 'Compila il tuo orario nello spazio docente per seguire le tue lezioni. Altrimenti scegli «Tutte le unità Didac».',
   p_timetable: 'Orario', p_documents: 'Documenti', newTab: 'Nuova scheda', download: 'Scarica', addDoc: 'Aggiungi un documento PDF', docFile: 'File PDF', docCat: 'Categoria',
   docSubject: 'Materia', docSubjectPh: 'Francese, Inglese…', docTitle: 'Titolo visualizzato', docTitlePh: 'Piano semestrale 1',

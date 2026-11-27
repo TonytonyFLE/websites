@@ -92,3 +92,7 @@ repris par l'Horaire auto et « Remplir la semaine ».
 Sélecteur FR | DE | EN | IT. Textes EN dans i18n-en.js, IT dans i18n-it.js, chargés seulement quand la langue est choisie
 (le poids du site ne change pas pour FR/DE). Claims officiels : « Your year. Your next step ahead. » / « Il tuo anno. Un passo avanti. ».
 Dates au format en-GB / it-CH. Import CSV : colonnes, modèles et valeurs (jours, couleurs, sections) aussi en EN et IT.
+
+## v1.8.1 (27.11.2026) : horaire auto « Créneaux choisis »
+Troisième mode de l'Horaire auto : on clique sur les créneaux Didac voulus (sans remplir l'emploi du temps),
+pauses calculées automatiquement, fonctionne tous les jours. Choix gardé dans le widget (state.picked).

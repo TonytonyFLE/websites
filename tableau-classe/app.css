@@ -570,3 +570,6 @@ form[data-role=slotform] input[type=time] { min-width: 120px; font-variant-numer
 .tt-once { align-self: start; font-size: 11px; font-weight: 700; background: var(--d-blanc); color: var(--d-noir); border: 1px solid var(--d-noir); border-radius: 999px; padding: 0 7px; margin-top: 2px; }
 .tt-once { align-self: flex-start; justify-self: start; width: max-content; }
 .tool { flex-shrink: 0; } .tool > span:last-child { overflow-wrap: normal; }
+.sch-pick { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 0 10px 8px; }
+.sch-slot { border: 2px solid var(--d-gris1); background: var(--d-blanc); color: var(--d-noir); border-radius: 999px; padding: 3px 9px; font: inherit; font-size: 12.5px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.sch-slot[aria-pressed=true] { background: var(--d-rot); border-color: var(--d-rot); color: var(--d-blanc); font-weight: 700; }

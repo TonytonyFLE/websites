@@ -211,14 +211,18 @@ const WIDGETS = {
 
   /* ----- Horaire auto : enchaînement cours → pause → cours, calé sur l'heure ----- */
   schedule: {
-    icon: 'arrow-roadmap', w: 460, h: 380, compact: true, init: () => ({ mode: 'mine', sound: true, compact: false }),
+    icon: 'arrow-roadmap', w: 460, h: 380, compact: true, init: () => ({ mode: 'mine', sound: true, picked: [], compact: false }),
     mount(b, wd, ctx) {
       const st = wd.state; let lastKey = null;
       const toMin = hm => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
       const fmtT = sec => fmtHMS(Math.max(0, Math.ceil(sec)), sec >= 3600);
       function segments(now) {
         const sched = S.schedule || { slots: DIDAC_SLOTS, cells: {} };
-        const day = now.getDay(); if (day < 1 || day > 5) return [];
+        const day = now.getDay();
+        // mode « créneaux choisis » : les créneaux cliqués par le prof, tous les jours, sans emploi du temps
+        if (st.mode === 'pick') return withPauses(sched, sched.slots.map((sl, i) => ({ sl, i })).filter(({ sl, i }) => !sl.brk && (st.picked || []).includes(i))
+          .map(({ sl }) => ({ type: 'lesson', s: toMin(sl.s), e: toMin(sl.e), label: T('lesson') })));
+        if (day < 1 || day > 5) return [];
         const iso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`, once = sched.once || {};
         const cellOf = i => once[iso + '|' + i] || (sched.cells || {})[day + '-' + i];
         const hasMine = sched.slots.some((sl, i) => !sl.brk && cellOf(i));
@@ -226,6 +230,9 @@ const WIDGETS = {
         if (mode === 'mine' && !hasMine) return [];
         const L = sched.slots.map((sl, i) => ({ sl, i })).filter(({ sl, i }) => !sl.brk && (mode === 'all' || cellOf(i)))
           .map(({ sl, i }) => { const c = cellOf(i); return { type: 'lesson', s: toMin(sl.s), e: toMin(sl.e), label: c ? [c.subject, c.cls].filter(Boolean).join(' · ') || T('lesson') : T('lesson'), room: c && c.room, color: c && c.color }; });
+        return withPauses(sched, L);
+      }
+      function withPauses(sched, L) {
         const out = [];
         L.forEach((seg, k) => {
           out.push(seg); const nx = L[k + 1];
@@ -256,9 +263,10 @@ const WIDGETS = {
               ${state === 'run' || state === 'before' ? `<div class="digits sch-left"></div>` : ''}
               ${next ? `<div class="sch-next">${T('nextUp')} ${esc(next.type === 'pause' ? next.label : next.label)} · ${hhmm(next.s)}${next.room ? ' · ' + T('room') + ' ' + esc(next.room) : ''}</div>` : ''}</div></div></div>
             <ol class="sch-list full-only">${segs.map((sg, k) => `<li class="${k === cur ? 'is-cur' : ''} ${sg.type === 'pause' ? 'is-p' : ''} ${sg.e <= nowM ? 'is-past' : ''}"><span>${hhmm(sg.s)}–${hhmm(sg.e)}</span><span>${esc(sg.label)}</span></li>`).join('')}</ol>
-            <div class="ctl full-only"><select class="inp" data-role="mode" aria-label="${T('display')}"><option value="mine" ${st.mode === 'mine' ? 'selected' : ''}>${T('schMine')}</option><option value="all" ${st.mode === 'all' ? 'selected' : ''}>${T('schAll')}</option></select>
+            <div class="ctl full-only"><select class="inp" data-role="mode" aria-label="${T('display')}"><option value="mine" ${st.mode === 'mine' ? 'selected' : ''}>${T('schMine')}</option><option value="all" ${st.mode === 'all' ? 'selected' : ''}>${T('schAll')}</option><option value="pick" ${st.mode === 'pick' ? 'selected' : ''}>${T('schPick')}</option></select>
               <label class="chk"><input type="checkbox" data-role="sound" ${st.sound ? 'checked' : ''}> ${T('sound')}</label></div>
-            ${st.mode === 'mine' && !Object.keys((S.schedule || {}).cells || {}).length ? `<div class="hint full-only">${T('schHint')}</div>` : ''}`;
+            ${st.mode === 'mine' && !Object.keys((S.schedule || {}).cells || {}).length ? `<div class="hint full-only">${T('schHint')}</div>` : ''}
+            ${st.mode === 'pick' ? `<div class="sch-pick full-only" role="group" aria-label="${T('schPick')}"><span class="lbl-s">${T('schPickHint')}</span>${(S.schedule || { slots: DIDAC_SLOTS }).slots.map((sl, i) => sl.brk ? '' : `<button class="sch-slot" data-slot="${i}" aria-pressed="${(st.picked || []).includes(i)}">${sl.s}–${sl.e}</button>`).join('')}</div>` : ''}`;
         }
         const lf = $('.sch-left', b); if (lf) lf.textContent = fmtT(left);
         const ring = $('.ring', b); if (ring) ring.setAttribute('stroke-dasharray', `${pct} 100`);
@@ -266,6 +274,12 @@ const WIDGETS = {
       b.addEventListener('change', e => {
         if (e.target.dataset.role === 'mode') { st.mode = e.target.value; lastKey = null; save(); b.innerHTML = ''; upd(); }
         if (e.target.dataset.role === 'sound') { st.sound = e.target.checked; save(); }
+      });
+      b.addEventListener('click', e => {
+        const sb = e.target.closest('[data-slot]'); if (!sb) return;
+        const i = +sb.dataset.slot; st.picked = st.picked || [];
+        st.picked = st.picked.includes(i) ? st.picked.filter(x => x !== i) : [...st.picked, i].sort((a, c) => a - c);
+        save(); b.innerHTML = ''; lastKey = null; upd();
       });
       const onSched = () => { b.innerHTML = ''; lastKey = null; upd(); };
       window.addEventListener('didac-schedule', onSched);

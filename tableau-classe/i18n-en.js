@@ -23,7 +23,7 @@ window.DIDAC_I18N.en = {
   csvRules_checklist: 'One line per task. section: preparation, during or follow-up.',
   aiPrompt: 'You are preparing a CSV file for the Didac class board ({what}).\nRules:\n- Answer only with the CSV content, with no text around it and no code block.\n- Separator: semicolon (;). Encoding UTF-8.\n- First line, exactly: {cols}\n- {rules}\n- Put a cell that contains a semicolon in quotation marks.\n\nExample:\n{ex}\n\nHere is my information:\n[paste your semester plan, list, dates… here]',
   w_schedule: 'Auto schedule', pauseLbl: 'Break', nextUp: 'Next:', noLessonToday: 'No lessons today', dayOver: 'Lessons are over for today', beforeFirst: 'Lessons start in',
-  schMine: 'My lessons (timetable)', schAll: 'All Didac periods', sound: 'Sound',
+  schMine: 'My lessons (timetable)', schAll: 'All Didac periods', schPick: 'Chosen periods', schPickHint: 'Click your periods:', sound: 'Sound',
   schHint: 'Fill in your timetable in the teacher area to follow your own lessons. Otherwise, choose “All Didac periods”.',
   p_timetable: 'Timetable', p_documents: 'Documents', newTab: 'New tab', download: 'Download', addDoc: 'Add a PDF document', docFile: 'PDF file', docCat: 'Category',
   docSubject: 'Subject', docSubjectPh: 'French, English…', docTitle: 'Display title', docTitlePh: 'Semester plan 1',
