@@ -127,3 +127,11 @@ pauses calculées automatiquement, fonctionne tous les jours. Choix gardé dans 
 - Les positions enregistrées ne sont plus jamais modifiées par la taille de l'écran (fit() = affichage seulement) :
   seuls un déplacement ou un redimensionnement à la main les changent.
 - Réglages de page : « Ranger les outils » (grille qui remplit le tableau) pour réparer vite une page.
+
+## v1.12.0 (28.11.2026) : Mes listes, dictaphone, plan de classe, jeu de l'oie
+- Mes listes (S.lists {id,name,text}) : flashcards → « Enregistrer dans Mes listes » ; liste partagée entre outils (renommer, supprimer = copie gardée).
+- Dictaphone (rec) : MediaRecorder, clips dans IndexedDB « didac-audio » (local, pas dans la sauvegarde JSON), réécoute, téléchargement, suppression.
+- Plan de classe (seats) : par classe (state.plans[classId] : rows, cols, off, seat) ; clic élève puis place (échange), au hasard, vider,
+  « Modifier la salle » = retirer/remettre des places ; absents barrés ; banc des élèves non placés.
+- Jeu de l'oie (goose) : 12-80 cases en serpentin, 1-2 dés, 1-8 équipes nommées, cartes tirées de Mes listes (réponse cachée, Juste = 1 ★),
+  cases spéciales +2 / −3 / rejoue, scoreboard, classement final. Dé via crypto.getRandomValues.

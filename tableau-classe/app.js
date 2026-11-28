@@ -42,6 +42,16 @@ function ensureCourses() {
   }
 }
 ensureCourses();
+/* Mes listes : listes de cartes enregistrées (flashcards, jeu de l'oie), partagées par tous les outils */
+S.lists = Array.isArray(S.lists) ? S.lists : [];
+const listById = id => (S.lists || []).find(l => l.id === id);
+const listCards = text => String(text || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const m = l.split(/\s*(?:;|\t|\s=\s|\s[–—-]\s)\s*/); return { f: m[0], b: m.slice(1).join(' ; ') }; });
+/* Dictaphone : petite base IndexedDB locale */
+const AudioDB = (() => {
+  const db = () => new Promise((res, rej) => { const r = indexedDB.open('didac-audio', 1); r.onupgradeneeded = () => r.result.createObjectStore('clips', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  const tx = (mode, fn) => db().then(d => new Promise((res, rej) => { const t = d.transaction('clips', mode), q = fn(t.objectStore('clips')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }));
+  return { put: c => tx('readwrite', s => s.put(c)), get: id => tx('readonly', s => s.get(id)), del: id => tx('readwrite', s => s.delete(id)) };
+})();
 let HOME = true; // le site s'ouvre sur l'accueil
 let saveT = null;
 function save(now) {
@@ -384,12 +394,23 @@ const WIDGETS = {
   },
   /* ----- Flashcards : une ligne = une carte (« recto ; verso »), recto seul ou recto-verso ----- */
   flash: {
-    icon: 'cards', w: 520, h: 360, init: () => ({ text: '', mode: 'rv', reverse: false, shuffle: true, view: 'edit', order: [], pos: 0, known: [], flipped: false }),
+    icon: 'cards', w: 520, h: 360, init: () => ({ text: '', listId: '', mode: 'rv', reverse: false, shuffle: true, view: 'edit', order: [], pos: 0, known: [], flipped: false }),
     mount(b, wd) {
-      const st = wd.state;
-      const cards = () => st.text.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
-        const m = l.split(/\s*(?:;|\t|\s=\s|\s[–—-]\s)\s*/); return { f: m[0], b: m.slice(1).join(' ; ') };
-      });
+      const st = wd.state; if (st.listId && !listById(st.listId)) st.listId = '';
+      const L0 = () => listById(st.listId);
+      const txt = () => L0() ? L0().text : st.text;
+      const cards = () => listCards(txt());
+      const listBar = () => `<div class="ctl fc-lists"><select class="inp" data-role="listId" aria-label="${T('myLists')}"><option value="">${T('listHere')}</option>${S.lists.map(l => `<option value="${l.id}" ${l.id === st.listId ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select>
+        ${L0() ? `<button class="btn btn--ghost btn--s" data-act="lsRen">${T('rename')}</button><button class="btn btn--ghost btn--s" data-act="lsDel">${T('delete')}</button><span class="lbl-s">${T('listShared')}</span>`
+          : `<button class="btn btn--ghost btn--s" data-act="lsSave" ${st.text.trim() ? '' : 'disabled'}>${T('listSave')}</button>`}</div>`;
+      function askName(title, val, done) {
+        openDlg(`<h2>${title}</h2><label class="field"><span>${T('listName')}</span><input class="inp" id="lsName" value="${esc(val)}" placeholder="${T('listNamePh')}"></label>
+          <div class="row row--end"><button class="btn btn--ghost" data-act="closeDlg">${T('cancel')}</button><button class="btn" id="lsOk">${T('save')}</button></div>`, body => {
+          const i = $('#lsName', body); i.focus(); i.select();
+          const ok = () => { const n = i.value.trim(); if (!n) { i.focus(); return; } closeDlg(); done(n); };
+          $('#lsOk', body).onclick = ok; i.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); ok(); } };
+        });
+      }
       function deal() {
         const n = cards().length; st.order = [...Array(n).keys()];
         if (st.shuffle) for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [st.order[i], st.order[j]] = [st.order[j], st.order[i]]; }
@@ -399,7 +420,7 @@ const WIDGETS = {
       function render() {
         const C = cards();
         if (st.view === 'edit' || !C.length) {
-          b.innerHTML = `<textarea class="inp rn-list" data-role="text" placeholder="${T('flashPh')}" aria-label="${T('flashCards')}">${esc(st.text)}</textarea>
+          b.innerHTML = `${listBar()}<textarea class="inp rn-list" data-role="text" placeholder="${T('flashPh')}" aria-label="${T('flashCards')}">${esc(txt())}</textarea>
             <div class="ctl"><div class="seg-s" role="group" aria-label="${T('flashMode')}">
               <button data-mode="recto" aria-pressed="${st.mode === 'recto'}">${T('flashRecto')}</button><button data-mode="rv" aria-pressed="${st.mode === 'rv'}">${T('flashRV')}</button></div>
               <label class="chk"><input type="checkbox" data-role="shuffle" ${st.shuffle ? 'checked' : ''}> ${T('shuffle')}</label>
@@ -427,16 +448,20 @@ const WIDGETS = {
             <span style="flex:1"></span>
             <button class="btn btn--ghost btn--s full-only" data-act="again">${T('shuffle')}</button><button class="btn btn--ghost btn--s full-only" data-act="edit">${T('editList')}</button></div>`;
       }
-      b.addEventListener('input', e => { if (e.target.dataset.role === 'text') { st.text = e.target.value; save(); const s = $('[data-act=start]', b); if (s) { const n = cards().length; s.disabled = !n; s.textContent = `${T('flashStart')} (${n})`; } } });
+      b.addEventListener('input', e => { if (e.target.dataset.role === 'text') { if (L0()) L0().text = e.target.value; else { st.text = e.target.value; const sv = $('[data-act=lsSave]', b); if (sv) sv.disabled = !st.text.trim(); } save(); const s = $('[data-act=start]', b); if (s) { const n = cards().length; s.disabled = !n; s.textContent = `${T('flashStart')} (${n})`; } } });
       b.addEventListener('change', e => {
         const r = e.target.dataset.role;
         if (r === 'shuffle') { st.shuffle = e.target.checked; save(); }
         if (r === 'reverse') { st.reverse = e.target.checked; save(); }
+        if (r === 'listId') { st.listId = e.target.value; st.order = []; save(); render(); }
       });
       b.addEventListener('click', e => {
         const md = e.target.closest('[data-mode]'); if (md) { st.mode = md.dataset.mode; save(); render(); return; }
         const a = e.target.closest('[data-act]'); if (!a) return;
         const act = a.dataset.act, L = left();
+        if (act === 'lsSave') { askName(T('listSave'), '', n => { const l = { id: uid(), name: n, text: st.text, created: Date.now() }; S.lists.push(l); st.listId = l.id; st.text = ''; save(); render(); toast(T('listSaved').replace('{n}', esc(n))); }); return; }
+        if (act === 'lsRen') { askName(T('rename'), L0().name, n => { L0().name = n; save(); render(); }); return; }
+        if (act === 'lsDel') { const l = L0(); confirmBox(T('listDelQ').replace('{n}', esc(l.name)), T('delete')).then(ok => { if (!ok) return; st.text = l.text; S.lists = S.lists.filter(x => x !== l); st.listId = ''; save(); render(); }); return; }
         if (act === 'start' || act === 'again') { deal(); st.view = 'play'; }
         if (act === 'edit') st.view = 'edit';
         if (act === 'flip') { if (st.mode !== 'rv') return; st.flipped = !st.flipped; const f = $('.fc', b); if (f) { f.classList.toggle('is-flipped', st.flipped); save(); return; } }
@@ -713,6 +738,256 @@ const WIDGETS = {
         if (e.target.closest('[data-act=pdf]')) exportPDF(area.innerHTML);
       });
       return () => document.removeEventListener('selectionchange', syncCtl);
+    }
+  },
+
+  /* ----- Dictaphone : enregistrements gardés dans ce navigateur (IndexedDB), jamais envoyés ----- */
+  rec: {
+    icon: 'politics-speech', w: 440, h: 360, init: () => ({ recs: [] }),
+    mount(b, wd) {
+      const st = wd.state; st.recs = st.recs || [];
+      let mr = null, stream = null, chunks = [], t0 = 0, tick = null, err = '';
+      const urls = new Map();
+      const fmt = s => `${Math.floor(s / 60)}:${pad(Math.floor(s % 60))}`;
+      async function render() {
+        if (mr) {
+          b.innerHTML = `<div class="big"><div><div class="rc-live"><span class="rc-dot"></span><span class="rc-time">${fmt((Date.now() - t0) / 1000)}</span></div>
+            <button class="btn rc-stop" data-act="stop">■ ${T('recStop')}</button></div></div>`;
+          return;
+        }
+        b.innerHTML = `<div class="ctl"><button class="btn rc-go" data-act="go"><span class="rc-dot rc-dot--s"></span>${T('recStart')}</button>
+            <span class="lbl-s">${T('recLocal')}</span></div>
+          ${err ? `<p class="lbl-s rc-err">${err}</p>` : ''}
+          <div class="rc-list">${st.recs.length ? st.recs.map(r => `<div class="rc-item" data-id="${r.id}">
+            <div class="rc-top"><b>${esc(r.n)}</b><span class="lbl-s">${new Date(r.at).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })} · ${fmt(r.dur)}</span><span style="flex:1"></span>
+              <button class="btn btn--ghost btn--s" data-dl="${r.id}">${T('download')}</button><button class="w-x" data-del="${r.id}" title="${T('delete')}" aria-label="${T('delete')} ${esc(r.n)}">×</button></div>
+            <audio controls preload="none" data-au="${r.id}"></audio></div>`).join('') : `<p class="lbl-s">${T('recEmpty')}</p>`}</div>`;
+        for (const r of st.recs) { const u = await clipURL(r.id); const a = b.querySelector(`[data-au="${r.id}"]`); if (a && u) a.src = u; }
+      }
+      async function clipURL(id) {
+        if (urls.has(id)) return urls.get(id);
+        const c = await AudioDB.get(id).catch(() => null); if (!c) return null;
+        const u = URL.createObjectURL(c.blob); urls.set(id, u); return u;
+      }
+      async function start() {
+        err = '';
+        if (!navigator.mediaDevices || !window.MediaRecorder) { err = T('recNoSupport'); render(); return; }
+        try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { err = T('recDenied'); render(); return; }
+        chunks = []; mr = new MediaRecorder(stream);
+        mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+        mr.onstop = async () => {
+          const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' }), dur = (Date.now() - t0) / 1000, id = uid();
+          stream.getTracks().forEach(t => t.stop()); stream = null; mr = null; clearInterval(tick);
+          await AudioDB.put({ id, blob }).catch(() => { err = T('storageFull'); });
+          if (!err) { st.recs.unshift({ id, n: `${T('recName')} ${st.recs.length + 1}`, dur, at: Date.now(), type: blob.type }); save(); }
+          render();
+        };
+        mr.start(); t0 = Date.now(); render();
+        tick = setInterval(() => { const t = $('.rc-time', b); if (t) t.textContent = fmt((Date.now() - t0) / 1000); }, 250);
+      }
+      b.addEventListener('click', async e => {
+        const a = e.target.closest('[data-act]');
+        if (a && a.dataset.act === 'go') { start(); return; }
+        if (a && a.dataset.act === 'stop') { if (mr && mr.state !== 'inactive') mr.stop(); return; }
+        const dl = e.target.closest('[data-dl]');
+        if (dl) { const r = st.recs.find(x => x.id === dl.dataset.dl), u = await clipURL(dl.dataset.dl); if (!u) return;
+          const ext = /mp4|aac|m4a/.test(r.type || '') ? 'm4a' : /ogg/.test(r.type || '') ? 'ogg' : 'webm';
+          const l = document.createElement('a'); l.href = u; l.download = `${r.n.replace(/[^\p{L}\p{N} _-]/gu, '')}.${ext}`; document.body.appendChild(l); l.click(); l.remove(); return; }
+        const d = e.target.closest('[data-del]');
+        if (d) { const r = st.recs.find(x => x.id === d.dataset.del); if (!r || !(await confirmBox(T('recDelQ').replace('{n}', esc(r.n)), T('delete')))) return;
+          st.recs = st.recs.filter(x => x !== r); AudioDB.del(r.id).catch(() => {}); if (urls.has(r.id)) { URL.revokeObjectURL(urls.get(r.id)); urls.delete(r.id); } save(); render(); }
+      });
+      render();
+      return () => { clearInterval(tick); if (mr && mr.state !== 'inactive') { mr.onstop = null; mr.stop(); } if (stream) stream.getTracks().forEach(t => t.stop()); urls.forEach(u => URL.revokeObjectURL(u)); };
+    }
+  },
+
+  /* ----- Plan de classe : on clique un élève puis une place (marche aussi au doigt sur l'écran tactile) ----- */
+  seats: {
+    icon: 'class-lesson', w: 640, h: 460, init: () => ({ classId: null, plans: {}, edit: false }),
+    mount(b, wd) {
+      const st = wd.state; st.plans = st.plans || {};
+      if (!classById(st.classId)) st.classId = S.classes[0] ? S.classes[0].id : null;
+      let sel = null; // élève sélectionné
+      const plan = () => { const p = st.plans[st.classId] = st.plans[st.classId] || { rows: 4, cols: 6, off: [], seat: {} }; return p; };
+      function render() {
+        const cls = classById(st.classId);
+        if (!cls) { b.innerHTML = `<div class="big"><div><p>${T('noClassHint')}</p><button class="btn" data-act="openClasses">${T('createClass')}</button></div></div>`; return; }
+        const P = plan(), N = P.rows * P.cols, byId = id => cls.students.find(s => s.id === id);
+        Object.keys(P.seat).forEach(k => { if (+k >= N || P.off.includes(+k) || !byId(P.seat[k])) delete P.seat[k]; });
+        const seated = new Set(Object.values(P.seat)), bench = cls.students.filter(s => !seated.has(s.id));
+        const desk = i => {
+          if (P.off.includes(i)) return `<button class="st-desk is-off" data-desk="${i}" ${st.edit ? '' : 'tabindex="-1"'} aria-label="${T('seatAisle')}"></button>`;
+          const s = byId(P.seat[i]);
+          return `<button class="st-desk ${s ? 'is-full' : ''} ${s && isAbsent(cls.id, s.id) ? 'is-abs' : ''} ${s && sel === s.id ? 'is-sel' : ''}" data-desk="${i}">${s ? esc(s.name) : ''}</button>`;
+        };
+        b.innerHTML = `<div class="ctl"><select class="inp" data-role="cls" aria-label="${T('class')}">${S.classes.map(c => `<option value="${c.id}" ${c.id === st.classId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+            <button class="btn btn--s" data-act="shuffle">${T('seatRandom')}</button>
+            <button class="btn btn--ghost btn--s" data-act="clear">${T('seatClear')}</button>
+            <span style="flex:1"></span>
+            <span class="full-only st-size"><label class="lbl-s">${T('seatRows')} <input class="inp st-n" type="number" min="1" max="10" data-role="rows" value="${P.rows}"></label>
+            <label class="lbl-s">${T('seatCols')} <input class="inp st-n" type="number" min="1" max="12" data-role="cols" value="${P.cols}"></label></span>
+            <button class="btn btn--ghost btn--s full-only" data-act="edit" aria-pressed="${st.edit}">${T('seatEdit')}</button></div>
+          <div class="st-room"><div class="st-front">${T('seatFront')}</div>
+            <div class="st-grid" style="grid-template-columns:repeat(${P.cols},1fr);grid-template-rows:repeat(${P.rows},1fr)">${Array.from({ length: N }, (_, i) => desk(i)).join('')}</div></div>
+          <div class="st-bench full-only" data-bench="1">${bench.length ? bench.map(s => `<button class="chip ${sel === s.id ? 'is-sel' : ''} ${isAbsent(cls.id, s.id) ? 'is-abs' : ''}" data-sid="${s.id}">${esc(s.name)}</button>`).join('') : `<span class="lbl-s">${st.edit ? T('seatEditHint') : T('seatAllPlaced')}</span>`}</div>`;
+      }
+      b.addEventListener('click', e => {
+        if (e.target.closest('[data-act=openClasses]')) { openClasses(); return; }
+        const P = st.classId && plan();
+        const a = e.target.closest('[data-act]');
+        if (a) {
+          const k = a.dataset.act, cls = classById(st.classId);
+          if (k === 'edit') st.edit = !st.edit;
+          if (k === 'clear') P.seat = {};
+          if (k === 'shuffle') {
+            const free = Array.from({ length: P.rows * P.cols }, (_, i) => i).filter(i => !P.off.includes(i));
+            const L = presentStudents(cls).map(s => s.id).concat(cls.students.filter(s => isAbsent(cls.id, s.id)).map(s => s.id));
+            for (let i = L.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [L[i], L[j]] = [L[j], L[i]]; }
+            P.seat = {}; L.slice(0, free.length).forEach((id, n) => { P.seat[free[n]] = id; });
+          }
+          sel = null; save(); render(); return;
+        }
+        const ch = e.target.closest('[data-sid]'); if (ch) { sel = sel === ch.dataset.sid ? null : ch.dataset.sid; render(); return; }
+        const dk = e.target.closest('[data-desk]');
+        if (dk) {
+          const i = +dk.dataset.desk;
+          if (st.edit) { if (P.off.includes(i)) P.off = P.off.filter(x => x !== i); else { P.off.push(i); delete P.seat[i]; } save(); render(); return; }
+          if (P.off.includes(i)) return;
+          const here = P.seat[i];
+          if (sel) { const from = Object.keys(P.seat).find(k => P.seat[k] === sel); if (from !== undefined) { if (here) P.seat[from] = here; else delete P.seat[from]; } P.seat[i] = sel; sel = null; save(); }
+          else if (here) sel = here;
+          render(); return;
+        }
+        if (e.target.closest('[data-bench]') && sel) { const from = Object.keys(P.seat).find(k => P.seat[k] === sel); if (from !== undefined) delete P.seat[from]; sel = null; save(); render(); }
+      });
+      b.addEventListener('change', e => {
+        const r = e.target.dataset.role; if (!r) return;
+        if (r === 'cls') { st.classId = e.target.value; sel = null; }
+        if (r === 'rows' || r === 'cols') { const P = plan(); const v = Math.max(1, Math.min(r === 'rows' ? 10 : 12, +e.target.value || 1)); P[r] = v; }
+        save(); render();
+      });
+      const onCls = () => { if (!classById(st.classId)) st.classId = S.classes[0] ? S.classes[0].id : null; render(); };
+      window.addEventListener('didac-classes', onCls);
+      render();
+      return () => window.removeEventListener('didac-classes', onCls);
+    }
+  },
+
+  /* ----- Jeu de l'oie : plateau, dés, équipes, cartes (Mes listes), scores ----- */
+  goose: {
+    icon: 'trophy', w: 820, h: 560, init: () => ({ view: 'setup', cells: 30, dice: 1, nTeams: 4, names: [], listId: '', specials: true, teams: [], turn: 0, card: null, deck: [], last: [], msg: '', winner: null }),
+    mount(b, wd) {
+      const st = wd.state;
+      const COLS = ['rot', 'blau', 'gruen', 'gelb', 'orange', 'pink', 'noir', 'gris3'];
+      const DARK = ['rot', 'noir'];
+      const special = i => { if (!st.specials || i <= 0 || i >= st.cells - 1) return null; if (i % 13 === 0) return 'again'; if (i % 9 === 0) return 'back'; if (i % 5 === 0) return 'fwd'; return null; };
+      const SP = { fwd: ['+2', 'gooseFwd'], back: ['−3', 'gooseBack'], again: ['↻', 'gooseAgain'] };
+      const deckCards = () => { const L = listById(st.listId); return L ? listCards(L.text) : []; };
+      let busy = false;
+      const rnd = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return 1 + a[0] % n; };
+      function setup() {
+        const lists = S.lists || [];
+        b.innerHTML = `<div class="gs-setup">
+          <div class="gs-row"><label class="field"><span>${T('gooseCells')}</span><input class="inp gs-n" type="number" min="12" max="80" data-role="cells" value="${st.cells}"></label>
+            <div class="field"><span>${T('gooseDice')}</span><div class="seg-s" role="group">${[1, 2].map(n => `<button data-dice="${n}" aria-pressed="${st.dice === n}">${n}</button>`).join('')}</div></div>
+            <label class="field"><span>${T('gooseTeams')}</span><input class="inp gs-n" type="number" min="1" max="8" data-role="nTeams" value="${st.nTeams}"></label></div>
+          <div class="gs-names">${Array.from({ length: st.nTeams }, (_, i) => `<label class="gs-name"><span class="gs-pawn" style="background:var(--d-${COLS[i]});color:${DARK.includes(COLS[i]) ? '#fff' : '#000'}">${i + 1}</span><input class="inp" data-name="${i}" value="${esc(st.names[i] || '')}" placeholder="${T('gooseTeam')} ${i + 1}"></label>`).join('')}</div>
+          <div class="gs-row"><label class="field"><span>${T('gooseCards')}</span><select class="inp" data-role="listId"><option value="">${T('gooseNoCards')}</option>${lists.map(l => `<option value="${l.id}" ${l.id === st.listId ? 'selected' : ''}>${esc(l.name)} (${listCards(l.text).length})</option>`).join('')}</select></label>
+            <label class="chk"><input type="checkbox" data-role="specials" ${st.specials ? 'checked' : ''}> ${T('gooseSpecials')}</label></div>
+          <p class="lbl-s" style="margin:0">${lists.length ? T('gooseCardsHint') : T('gooseNoListHint')}</p>
+          <div class="ctl" style="padding:0">${st.teams.length && !st.winner ? `<button class="btn btn--ghost" data-act="resume">${T('gooseResume')}</button>` : ''}<span style="flex:1"></span><button class="btn" data-act="new">${T('gooseStart')}</button></div></div>`;
+      }
+      function boardHTML() {
+        const n = st.cells, r = b.getBoundingClientRect(), ratio = Math.max(.8, (r.width || 800) / Math.max(200, (r.height || 500) - 120));
+        const cols = Math.max(4, Math.min(n, Math.round(Math.sqrt(n * ratio)))), rows = Math.ceil(n / cols);
+        let cells = '';
+        for (let i = 0; i < n; i++) {
+          const row = Math.floor(i / cols), c = row % 2 ? cols - 1 - (i % cols) : i % cols, sp = special(i);
+          const pawns = st.teams.map((t, k) => t.pos === i ? `<span class="gs-pawn ${k === st.turn ? 'is-turn' : ''}" style="background:var(--d-${COLS[k]});color:${DARK.includes(COLS[k]) ? '#fff' : '#000'}">${k + 1}</span>` : '').join('');
+          cells += `<div class="gs-cell ${i === 0 ? 'is-start' : ''} ${i === n - 1 ? 'is-end' : ''} ${sp ? 'sp-' + sp : ''}" style="grid-row:${row + 1};grid-column:${c + 1}">
+            <span class="gs-num">${i === 0 ? T('gooseGo') : i === n - 1 ? '🏁' : i}</span>${sp ? `<span class="gs-sp">${SP[sp][0]}</span>` : ''}<span class="gs-pawns">${pawns}</span></div>`;
+        }
+        return `<div class="gs-board" style="grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},1fr)">${cells}</div>`;
+      }
+      function play() {
+        const t = st.teams[st.turn], k = st.turn;
+        b.innerHTML = `<div class="gs-score">${st.teams.map((x, i) => `<span class="gs-team ${i === st.turn ? 'is-turn' : ''}"><span class="gs-pawn" style="background:var(--d-${COLS[i]});color:${DARK.includes(COLS[i]) ? '#fff' : '#000'}">${i + 1}</span><b>${esc(x.n)}</b><span class="gs-pts" title="${T('goosePoints')}">${x.pts} ★</span></span>`).join('')}</div>
+          ${boardHTML()}
+          <div class="ctl gs-ctl"><span class="gs-who"><span class="gs-pawn" style="background:var(--d-${COLS[k]});color:${DARK.includes(COLS[k]) ? '#fff' : '#000'}">${k + 1}</span>${esc(t.n)}</span>
+            <span class="gs-dice">${(st.last.length ? st.last : Array(st.dice).fill('?')).map(v => `<span class="gs-die">${v}</span>`).join('')}</span>
+            <span class="lbl-s gs-msg">${st.msg || ''}</span><span style="flex:1"></span>
+            <button class="btn" data-act="roll" ${busy || st.card || st.winner ? 'disabled' : ''}>${T('gooseRoll')}</button>
+            <button class="btn btn--ghost btn--s" data-act="skip" ${busy || st.winner ? 'disabled' : ''}>${T('gooseNext')}</button>
+            <button class="btn btn--ghost btn--s full-only" data-act="setup">${T('gooseSettings')}</button></div>
+          ${st.card ? cardHTML() : ''}${st.winner ? endHTML() : ''}`;
+      }
+      function cardHTML() {
+        const c = st.card;
+        return `<div class="gs-over"><div class="gs-card"><span class="lbl-s">${esc(st.teams[st.turn].n)}</span><div class="gs-q">${esc(c.f)}</div>
+          ${c.b ? (c.show ? `<div class="gs-a">${esc(c.b)}</div>` : `<button class="btn btn--ghost" data-act="show">${T('gooseShow')}</button>`) : ''}
+          <div class="row" style="justify-content:center"><button class="btn" data-act="right">✓ ${T('gooseRight')}</button><button class="btn btn--black" data-act="wrong">✗ ${T('gooseWrong')}</button></div></div></div>`;
+      }
+      function endHTML() {
+        const R = st.teams.map((t, i) => ({ t, i })).sort((a, b2) => (b2.t.pos - a.t.pos) || (b2.t.pts - a.t.pts));
+        return `<div class="gs-over"><div class="gs-card">${ICON('trophy')}<div class="gs-q">${esc(st.teams[st.winner - 1].n)}</div>
+          <ol class="gs-rank">${R.map(({ t, i }) => `<li><span class="gs-pawn" style="background:var(--d-${COLS[i]});color:${DARK.includes(COLS[i]) ? '#fff' : '#000'}">${i + 1}</span>${esc(t.n)} · ${t.pos === st.cells - 1 ? '🏁' : T('gooseCell') + ' ' + t.pos} · ${t.pts} ★</li>`).join('')}</ol>
+          <div class="row" style="justify-content:center"><button class="btn" data-act="new">${T('gooseAgainBtn')}</button><button class="btn btn--ghost" data-act="setup">${T('gooseSettings')}</button></div></div></div>`;
+      }
+      const render = () => (st.view === 'setup' || !st.teams.length ? setup() : play());
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      function nextTurn() { st.turn = (st.turn + 1) % st.teams.length; st.last = []; st.msg = ''; }
+      function drawCard() {
+        const C = deckCards(); if (!C.length) return null;
+        if (!st.deck.length || st.deck.some(i => i >= C.length)) { st.deck = [...C.keys()]; for (let i = st.deck.length - 1; i > 0; i--) { const j = rnd(i + 1) - 1; [st.deck[i], st.deck[j]] = [st.deck[j], st.deck[i]]; } }
+        return Object.assign({ show: false }, C[st.deck.pop()]);
+      }
+      async function walk(t, steps) {
+        const dir = Math.sign(steps);
+        for (let s = 0; s < Math.abs(steps); s++) { const np = t.pos + dir; if (np < 0 || np > st.cells - 1) break; t.pos = np; play(); await wait(220); }
+      }
+      async function roll() {
+        if (busy) return; busy = true; st.msg = ''; const t = st.teams[st.turn];
+        for (let i = 0; i < 8; i++) { st.last = Array.from({ length: st.dice }, () => rnd(6)); play(); await wait(70); }
+        st.last = Array.from({ length: st.dice }, () => rnd(6)); const sum = st.last.reduce((a, c) => a + c, 0); play(); await wait(300);
+        await walk(t, Math.min(sum, st.cells - 1 - t.pos));
+        let again = false;
+        if (t.pos === st.cells - 1) { st.winner = st.turn + 1; busy = false; save(); play(); return; }
+        const sp = special(t.pos);
+        if (sp) { st.msg = T(SP[sp][1]); play(); await wait(700); if (sp === 'fwd') await walk(t, 2); if (sp === 'back') await walk(t, -3); if (sp === 'again') again = true; }
+        if (t.pos === st.cells - 1) { st.winner = st.turn + 1; busy = false; save(); play(); return; }
+        busy = false;
+        st.card = drawCard();
+        if (!st.card && !again) { save(); play(); await wait(600); nextTurn(); }
+        else if (!st.card && again) st.msg = T('gooseAgain');
+        st.again = again; save(); play();
+      }
+      b.addEventListener('click', e => {
+        const dc = e.target.closest('[data-dice]'); if (dc) { st.dice = +dc.dataset.dice; save(); setup(); return; }
+        const a = e.target.closest('[data-act]'); if (!a) return;
+        const k = a.dataset.act;
+        if (k === 'new') { readNames(); st.teams = Array.from({ length: st.nTeams }, (_, i) => ({ n: st.names[i] || `${T('gooseTeam')} ${i + 1}`, pos: 0, pts: 0 })); st.turn = 0; st.card = null; st.winner = null; st.last = []; st.msg = ''; st.deck = []; st.view = 'play'; }
+        if (k === 'resume') { readNames(); st.teams.forEach((t, i) => { if (st.names[i]) t.n = st.names[i]; }); st.view = 'play'; }
+        if (k === 'setup') { st.view = 'setup'; }
+        if (k === 'roll') { roll(); return; }
+        if (k === 'skip') { st.card = null; nextTurn(); }
+        if (k === 'show' && st.card) st.card.show = true;
+        if ((k === 'right' || k === 'wrong') && st.card) { if (k === 'right') st.teams[st.turn].pts++; st.card = null; if (st.again) { st.again = false; st.msg = T('gooseAgain'); st.last = []; } else nextTurn(); }
+        save(); render();
+      });
+      function readNames() { b.querySelectorAll('[data-name]').forEach(inp => { st.names[+inp.dataset.name] = inp.value.trim(); }); }
+      b.addEventListener('change', e => {
+        const r = e.target.dataset.role; if (!r) return; readNames();
+        if (r === 'cells') st.cells = Math.max(12, Math.min(80, +e.target.value || 30));
+        if (r === 'nTeams') st.nTeams = Math.max(1, Math.min(8, +e.target.value || 2));
+        if (r === 'listId') { st.listId = e.target.value; st.deck = []; }
+        if (r === 'specials') st.specials = e.target.checked;
+        save(); setup();
+      });
+      b.addEventListener('input', e => { if (e.target.dataset.name !== undefined) { st.names[+e.target.dataset.name] = e.target.value.trim(); save(); } });
+      const ro = new ResizeObserver(() => { if (st.view === 'play' && !busy) play(); }); ro.observe(b);
+      render();
+      return () => ro.disconnect();
     }
   },
 
@@ -1020,7 +1295,7 @@ const WIDGETS = {
     }
   }
 };
-const ORDER = ['clock', 'timer', 'schedule', 'stopwatch', 'random', 'flash', 'groups', 'dice', 'countdown', 'plan', 'homework', 'work', 'light', 'poll', 'text', 'sticker', 'image', 'calc', 'draw'];
+const ORDER = ['clock', 'timer', 'schedule', 'stopwatch', 'random', 'flash', 'groups', 'seats', 'dice', 'goose', 'countdown', 'plan', 'homework', 'work', 'light', 'poll', 'rec', 'text', 'sticker', 'image', 'calc', 'draw'];
 
 /* ---------- Choix d'une icône Didac (planning, stickers) ---------- */
 function iconPicker(current, onPick) {
@@ -1672,7 +1947,7 @@ function importBoard(file) {
       const d = JSON.parse(r.result); if (d.app !== 'didac-tableau' || !d.state) throw new Error('format');
       closeDlg();
       if (!(await confirmBox(T('importQ')))) return;
-      S = d.state; S.classes = S.classes || []; S.presence = S.presence || {}; ensureCourses();
+      S = d.state; S.classes = S.classes || []; S.presence = S.presence || {}; ensureCourses(); S.lists = Array.isArray(S.lists) ? S.lists : [];
       if (d.vault) LS.set('didac-tableau-vault', d.vault);
       if (d.docs && window.DidacDocs) await window.DidacDocs.importAll(d.docs);
       save(true); applyStatic(); renderTabs(); renderBoard();

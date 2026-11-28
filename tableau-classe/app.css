@@ -676,3 +676,72 @@ body.dock-hidden .side { bottom: 0; }
 .tx-tblctl[hidden] { display: none; }
 .tx-tblctl .tb { font-size: 13px; display: inline-flex; align-items: center; gap: 2px; }
 .tb-tbl svg { display: block; }
+
+/* v1.12 — Mes listes (flashcards) */
+.fc-lists { border-bottom: 1px solid var(--d-gris1); }
+.fc-lists select { max-width: 55%; }
+
+/* v1.12 — Dictaphone */
+.rc-go { gap: 8px; }
+.rc-dot { display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: var(--d-rot); animation: rcPulse 1s ease-in-out infinite; }
+.rc-dot--s { width: 12px; height: 12px; background: var(--d-blanc); animation: none; }
+@keyframes rcPulse { 50% { opacity: .35; } }
+.rc-live { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 14px; }
+.rc-time { font-size: clamp(28px, 16cqmin, 90px); font-weight: 700; font-variant-numeric: tabular-nums; }
+.rc-stop { font-size: 18px; padding: 10px 22px; }
+.rc-err { color: var(--d-rot); margin: 0 12px; font-weight: 700; }
+.rc-list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 12px 10px; display: grid; gap: 8px; align-content: start; }
+.rc-item { border: 1px solid var(--d-gris1); border-radius: var(--d-radius-s); padding: 6px 8px; display: grid; gap: 4px; }
+.rc-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rc-item audio { width: 100%; height: 34px; }
+
+/* v1.12 — Plan de classe */
+.st-size { display: inline-flex; gap: 8px; align-items: center; }
+.st-n { width: 58px; padding: 3px 6px; }
+.st-room { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 4px 12px; }
+.st-front { align-self: center; background: var(--d-rot); color: var(--d-blanc); font-weight: 700; font-size: 13px; padding: 2px 28px; border-radius: 6px; }
+.st-grid { flex: 1; min-height: 0; display: grid; gap: 6px; }
+.st-desk { appearance: none; border: 2px solid var(--d-gris2); background: var(--d-blanc); border-radius: 8px; font: inherit; font-weight: 700; font-size: clamp(11px, 3.4cqmin, 22px); color: var(--d-noir); cursor: pointer; padding: 2px; overflow: hidden; text-overflow: ellipsis; min-width: 0; min-height: 0; line-height: 1.1; overflow-wrap: anywhere; }
+.st-desk.is-full { border-color: var(--d-rot); }
+.st-desk.is-off { border: 2px dashed transparent; background: transparent; cursor: default; }
+.w .st-desk.is-off:hover { border-color: var(--d-gris2); }
+.st-desk.is-abs, .chip.is-abs { opacity: .45; text-decoration: line-through; }
+.st-desk.is-sel, .chip.is-sel { background: var(--d-gelb); border-color: var(--d-noir); }
+.st-desk:hover { border-color: var(--d-noir); }
+.st-bench { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 12px 8px; border-top: 1px solid var(--d-gris1); min-height: 38px; max-height: 30%; overflow-y: auto; align-items: center; }
+
+/* v1.12 — Jeu de l'oie */
+.gs-setup { flex: 1; overflow-y: auto; padding: 12px 16px; display: grid; gap: 12px; align-content: start; }
+.gs-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+.gs-n { width: 80px; }
+.gs-names { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
+.gs-name { display: flex; align-items: center; gap: 6px; }
+.gs-name .inp { flex: 1; min-width: 0; }
+.gs-pawn { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; font-weight: 700; font-size: 13px; flex: none; box-shadow: 0 0 0 2px var(--d-blanc), 0 1px 3px rgba(0,0,0,.4); line-height: 1; }
+.gs-score { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--d-gris1); }
+.gs-team { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; border: 2px solid transparent; font-size: 14px; }
+.gs-team.is-turn { border-color: var(--d-rot); }
+.gs-pts { font-weight: 700; color: var(--d-rot); }
+.gs-board { flex: 1; min-height: 0; display: grid; gap: 4px; padding: 8px 10px; }
+.gs-cell { position: relative; border: 2px solid var(--d-gris2); border-radius: 8px; background: var(--d-blanc); min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.gs-num { font-size: clamp(9px, 2.4cqmin, 15px); font-weight: 700; padding: 1px 4px; color: var(--d-gris4); }
+.gs-cell.is-start, .gs-cell.is-end { border-color: var(--d-rot); }
+.gs-cell.is-start .gs-num, .gs-cell.is-end .gs-num { color: var(--d-rot); }
+.gs-cell.sp-fwd { background: var(--d-gruen); } .gs-cell.sp-back { background: var(--d-orange); } .gs-cell.sp-again { background: var(--d-gelb); }
+.gs-cell[class*="sp-"] .gs-num { color: var(--d-noir); }
+.gs-sp { position: absolute; right: 4px; top: 1px; font-weight: 700; font-size: clamp(9px, 2.6cqmin, 16px); }
+.gs-pawns { flex: 1; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 2px; }
+.gs-pawns .gs-pawn { font-size: clamp(9px, 2.4cqmin, 15px); }
+.gs-pawn.is-turn { box-shadow: 0 0 0 2px var(--d-blanc), 0 0 0 4px var(--d-noir); }
+.gs-ctl { border-top: 1px solid var(--d-gris1); }
+.gs-who { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.gs-dice { display: inline-flex; gap: 4px; }
+.gs-die { display: inline-grid; place-items: center; width: 34px; height: 34px; border: 2px solid var(--d-noir); border-radius: 7px; font-weight: 700; font-size: 18px; background: var(--d-blanc); }
+.gs-msg { font-weight: 700; color: var(--d-rot); }
+.gs-over { position: absolute; inset: 0; background: rgba(0,0,0,.35); display: grid; place-items: center; padding: 16px; z-index: 5; }
+.gs-card { background: var(--d-blanc); border-radius: var(--d-radius); padding: 18px 22px; max-width: min(560px, 92%); width: 100%; display: grid; gap: 12px; text-align: center; justify-items: center; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+.gs-card svg { width: 54px; height: 54px; }
+.gs-q { font-size: clamp(20px, 6cqmin, 44px); font-weight: 700; overflow-wrap: anywhere; }
+.gs-a { font-size: clamp(18px, 5cqmin, 36px); color: var(--d-rot); font-weight: 700; overflow-wrap: anywhere; }
+.gs-rank { text-align: left; margin: 0; padding-left: 1.4em; display: grid; gap: 4px; }
+.gs-rank li { display: flex; align-items: center; gap: 6px; }
