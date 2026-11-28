@@ -665,3 +665,14 @@ body, body.side-hidden { grid-template-columns: 0 minmax(0, 1fr); }
 .side { position: fixed; z-index: 4000; left: 0; top: var(--head-h); bottom: var(--dock-h); width: 280px; max-width: 85vw; box-shadow: 0 10px 30px rgba(0,0,0,.25); border-right: 0; }
 body.dock-hidden .side { bottom: 0; }
 .board { isolation: isolate; }
+
+/* v1.11 — tableaux dans l'outil Texte */
+.tx-tbl { border-collapse: collapse; margin: .4em 0; min-width: 40%; max-width: 100%; }
+.tx-tbl td, .tx-tbl th { border: 1px solid var(--d-gris3); padding: .25em .5em; vertical-align: top; min-width: 2.5em; text-align: left; }
+.tx-tbl th { background: var(--d-gris1); font-weight: 700; }
+.tx-area table:not(.tx-tbl) { border-collapse: collapse; }
+.tx-area table:not(.tx-tbl) td, .tx-area table:not(.tx-tbl) th { border: 1px solid var(--d-gris3); padding: .25em .5em; }
+.tx-tblctl { display: inline-flex; flex-wrap: wrap; gap: 2px; padding-left: 6px; border-left: 1px solid var(--d-gris1); }
+.tx-tblctl[hidden] { display: none; }
+.tx-tblctl .tb { font-size: 13px; display: inline-flex; align-items: center; gap: 2px; }
+.tb-tbl svg { display: block; }

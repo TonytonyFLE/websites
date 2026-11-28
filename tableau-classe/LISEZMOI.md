@@ -113,3 +113,10 @@ pauses calculées automatiquement, fonctionne tous les jours. Choix gardé dans 
 ## v1.10.1 (28.11.2026)
 - Volet des pages en superposition (fixed, par-dessus le tableau) : le tableau garde toute sa largeur, les outils ne bougent plus.
   Fermé à l'ouverture du site ; se referme en cliquant ailleurs ou en choisissant une page. .board isolé (isolation) pour rester sous le volet.
+
+## v1.11.0 (28.11.2026) : tableaux dans l'outil Texte
+- Bouton tableau (lignes, colonnes, 1re ligne en en-tête). Curseur dans un tableau : + / − ligne, + / − colonne, en-tête, supprimer.
+  Tab = case suivante (nouvelle ligne à la fin), Maj+Tab = case précédente.
+- Coller un tableau de Word / Excel / Google Sheets / page web : structure gardée (fusion colspan/rowspan, gras), le reste nettoyé.
+  Texte avec tabulations → tableau. Autre texte collé : toujours en texte brut.
+- Les tableaux passent dans l'export PDF.

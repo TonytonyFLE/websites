@@ -620,6 +620,15 @@ const WIDGETS = {
           <button class="tb" data-cmd="hl" title="${T('highlight')}"><span class="hl" style="background:var(--d-gelb);padding:0 4px">ab</span></button>
           <button class="tb" data-size="-" title="${T('smaller')}">A−</button>
           <button class="tb" data-size="+" title="${T('bigger')}">A+</button>
+          <button class="tb tb-tbl" data-tbl="new" title="${T('insertTable')}" aria-label="${T('insertTable')}">${TBL_SVG}</button>
+          <span class="tx-tblctl" hidden>
+            <button class="tb" data-tbl="rowA" title="${T('tblRowAdd')}">+ ${T('tblRow')}</button>
+            <button class="tb" data-tbl="colA" title="${T('tblColAdd')}">+ ${T('tblCol')}</button>
+            <button class="tb" data-tbl="rowD" title="${T('tblRowDel')}">− ${T('tblRow')}</button>
+            <button class="tb" data-tbl="colD" title="${T('tblColDel')}">− ${T('tblCol')}</button>
+            <button class="tb" data-tbl="head" title="${T('tblHead')}">${T('tblHeadShort')}</button>
+            <button class="tb" data-tbl="del" title="${T('tblDel')}" aria-label="${T('tblDel')}">${TBL_SVG}×</button>
+          </span>
           <span class="sp"></span>
           <button class="btn btn--s" data-act="pdf">PDF</button>
         </div>
@@ -628,9 +637,64 @@ const WIDGETS = {
       area.innerHTML = st.html; area.style.fontSize = st.size + 'px';
       const store = () => { st.html = area.innerHTML; save(); };
       area.addEventListener('input', store);
-      area.addEventListener('paste', e => { e.preventDefault(); const t = (e.clipboardData || window.clipboardData).getData('text/plain'); document.execCommand('insertText', false, t); });
+      // coller : tableaux de Word / Excel / Google Sheets gardés (nettoyés), sinon texte brut
+      area.addEventListener('paste', e => {
+        e.preventDefault(); const cd = e.clipboardData || window.clipboardData;
+        const html = cd.getData('text/html'), t = cd.getData('text/plain');
+        let out = null;
+        if (html && /<table/i.test(html)) out = pasteTableHTML(html);
+        else if (/\t/.test(t) && t.trim().includes('\n') || /\t/.test(t) && !html) out = tsvTable(t);
+        if (out) document.execCommand('insertHTML', false, out + '<p><br></p>'); else document.execCommand('insertText', false, t);
+        store();
+      });
+      const cellAt = () => { const sel = window.getSelection(); if (!sel.rangeCount) return null; const n = sel.anchorNode; const el = n && (n.nodeType === 1 ? n : n.parentElement); const c = el && el.closest('td, th'); return c && area.contains(c) ? c : null; };
+      const ctl = $('.tx-tblctl', b);
+      const syncCtl = () => { ctl.hidden = !cellAt(); };
+      document.addEventListener('selectionchange', syncCtl);
+      const putCaret = el => { const r = document.createRange(); r.selectNodeContents(el); r.collapse(true); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); };
+      const newCell = tag => { const c = document.createElement(tag); c.innerHTML = '<br>'; return c; };
+      function tableCmd(k) {
+        if (k === 'new') { openTableDlg(); return; }
+        const c = cellAt(); if (!c) return;
+        const tr = c.parentElement, tbl = c.closest('table'), ci = [...tr.children].indexOf(c), rows = [...tbl.rows];
+        if (k === 'rowA') { const nr = document.createElement('tr'); [...tr.children].forEach(() => nr.appendChild(newCell('td'))); tr.after(nr); putCaret(nr.cells[Math.min(ci, nr.cells.length - 1)]); }
+        if (k === 'colA') { rows.forEach(r => { const ref = r.cells[Math.min(ci, r.cells.length - 1)]; ref.after(newCell(ref.tagName.toLowerCase())); }); putCaret(tr.cells[ci + 1]); }
+        if (k === 'rowD') { if (rows.length < 2) { tbl.remove(); } else { const nxt = tr.nextElementSibling || tr.previousElementSibling; tr.remove(); putCaret(nxt.cells[0]); } }
+        if (k === 'colD') { if (tr.cells.length < 2) tbl.remove(); else rows.forEach(r => { const x = r.cells[Math.min(ci, r.cells.length - 1)]; x && x.remove(); }); }
+        if (k === 'head') { const r0 = tbl.rows[0], to = r0.cells[0].tagName === 'TH' ? 'td' : 'th'; [...r0.cells].forEach(x => { const y = document.createElement(to); y.innerHTML = x.innerHTML; x.replaceWith(y); }); }
+        if (k === 'del') tbl.remove();
+        store(); syncCtl();
+      }
+      function openTableDlg() {
+        const sel = window.getSelection(), saved = sel.rangeCount && area.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+        openDlg(`<h2>${T('insertTable')}</h2>
+          <div class="row"><label class="field"><span>${T('tblRows')}</span><input class="inp" type="number" id="tbR" min="1" max="30" value="3" style="width:90px"></label>
+          <label class="field"><span>${T('tblCols')}</span><input class="inp" type="number" id="tbC" min="1" max="12" value="3" style="width:90px"></label></div>
+          <label class="chk"><input type="checkbox" id="tbH" checked> ${T('tblHead')}</label>
+          <p class="lbl-s" style="margin:0">${T('tblPasteHint')}</p>
+          <div class="row row--end"><button class="btn btn--ghost" data-act="closeDlg">${T('cancel')}</button><button class="btn" id="tbOk">${T('insert')}</button></div>`, body => {
+          $('#tbOk', body).onclick = () => {
+            const R = Math.max(1, Math.min(30, +$('#tbR', body).value || 3)), C = Math.max(1, Math.min(12, +$('#tbC', body).value || 3)), H = $('#tbH', body).checked;
+            const html = '<table class="tx-tbl" data-new="1">' + Array.from({ length: R }, (_, r) => '<tr>' + Array.from({ length: C }, () => r === 0 && H ? '<th><br></th>' : '<td><br></td>').join('') + '</tr>').join('') + '</table><p><br></p>';
+            closeDlg(); area.focus();
+            const s2 = window.getSelection(); s2.removeAllRanges();
+            if (saved) s2.addRange(saved); else { const r = document.createRange(); r.selectNodeContents(area); r.collapse(false); s2.addRange(r); }
+            document.execCommand('insertHTML', false, html);
+            const nt = area.querySelector('table[data-new]'); if (nt) { nt.removeAttribute('data-new'); putCaret(nt.rows[0].cells[0]); }
+            store(); syncCtl();
+          };
+        });
+      }
+      area.addEventListener('keydown', e => {
+        if (e.key !== 'Tab') return; const c = cellAt(); if (!c) return;
+        e.preventDefault(); const cells = [...c.closest('table').querySelectorAll('td, th')], i = cells.indexOf(c);
+        let n = cells[i + (e.shiftKey ? -1 : 1)];
+        if (!n && !e.shiftKey) { putCaret(c); tableCmd('rowA'); n = c.parentElement.nextElementSibling.cells[0]; }
+        if (n) putCaret(n);
+      });
       b.addEventListener('mousedown', e => { if (e.target.closest('.tb')) e.preventDefault(); });
       b.addEventListener('click', e => {
+        const tb = e.target.closest('[data-tbl]'); if (tb) { tableCmd(tb.dataset.tbl); return; }
         const c = e.target.closest('[data-cmd]');
         if (c) {
           area.focus();
@@ -648,6 +712,7 @@ const WIDGETS = {
         if (sz) { st.size = Math.max(14, Math.min(96, st.size + (sz.dataset.size === '+' ? 4 : -4))); area.style.fontSize = st.size + 'px'; save(); return; }
         if (e.target.closest('[data-act=pdf]')) exportPDF(area.innerHTML);
       });
+      return () => document.removeEventListener('selectionchange', syncCtl);
     }
   },
 
@@ -1005,6 +1070,41 @@ function fmtNum(v) { return String(parseFloat(v.toPrecision(12))); }
 
 /* ---------- Texte enrichi sûr (gras + surlignage Didac), partagé avec l'espace prof ---------- */
 const ALLOWED = new Set(['b', 'strong', 'i', 'em', 'u', 'br', 'div', 'p', 'span', 'ul', 'ol', 'li']);
+/* ---------- Tableaux dans l'outil Texte ---------- */
+const TBL_SVG = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="16" height="14" rx="1.5"/><path d="M2 8h16M2 12.5h16M8 3v14M13 3v14"/></svg>';
+// tableau collé depuis Word / Excel / Google Sheets / une page web : on garde la structure et le gras/italique, rien d'autre
+function pasteTableHTML(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const KEEP = new Set(['table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'b', 'strong', 'i', 'em', 'u', 'br', 'p', 'ul', 'ol', 'li']);
+  doc.querySelectorAll('script, style, meta, link, title, colgroup, col, xml, img, svg, iframe, object').forEach(n => n.remove());
+  (function walk(n) {
+    for (const c of [...n.childNodes]) {
+      if (c.nodeType === 8) { c.remove(); continue; }
+      if (c.nodeType !== 1) continue;
+      walk(c);
+      const tag = c.tagName.toLowerCase();
+      // Excel/Sheets mettent le gras en style : on le convertit
+      const stl = c.getAttribute('style') || '';
+      if (!KEEP.has(tag)) {
+        if (/font-weight:\s*(bold|[6-9]00)/i.test(stl)) { const bb = doc.createElement('b'); bb.append(...c.childNodes); c.replaceWith(bb); }
+        else c.replaceWith(...c.childNodes);
+        continue;
+      }
+      for (const a of [...c.attributes]) if (!((a.name === 'colspan' || a.name === 'rowspan') && /^\d{1,2}$/.test(a.value) && /^t[dh]$/.test(tag))) c.removeAttribute(a.name);
+      if ((tag === 'td' || tag === 'th') && /font-weight:\s*(bold|[6-9]00)/i.test(stl) && tag === 'td') { const bb = doc.createElement('b'); bb.append(...c.childNodes); c.appendChild(bb); }
+    }
+  })(doc.body);
+  // paragraphes Word dans les cellules → retours à la ligne
+  doc.querySelectorAll('td p, th p').forEach(p => { const nx = p.nextElementSibling; p.replaceWith(...p.childNodes, ...(nx ? [doc.createElement('br')] : [])); });
+  doc.querySelectorAll('table').forEach(t => { t.className = 'tx-tbl'; t.querySelectorAll('td, th').forEach(c => { if (!c.textContent.trim() && !c.querySelector('br')) c.innerHTML = '<br>'; }); });
+  return doc.body.innerHTML.trim();
+}
+// texte avec tabulations (copie de tableur sans HTML) → tableau
+function tsvTable(t) {
+  const rows = t.replace(/\r/g, '').replace(/\n+$/, '').split('\n').map(r => r.split('\t'));
+  const C = Math.max(...rows.map(r => r.length)); if (C < 2) return null;
+  return '<table class="tx-tbl">' + rows.map(r => '<tr>' + Array.from({ length: C }, (_, i) => `<td>${r[i] ? esc(r[i]) : '<br>'}</td>`).join('') + '</tr>').join('') + '</table>';
+}
 function cleanHTML(html) {
   html = String(html || '');
   if (!/[<>]/.test(html)) html = esc(html).replace(/\n/g, '<br>');
@@ -1031,7 +1131,7 @@ function exportPDF(html, title) {
   <style>@page{size:A4;margin:18mm 20mm 20mm}body{font-family:"Atkinson Hyperlegible Next",Verdana,sans-serif;font-weight:300;font-size:12pt;line-height:1.45;color:#000;margin:0}
   header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid #DADADA;padding-bottom:8px;margin-bottom:18px}
   header img{height:12mm} header span{font-size:9pt;color:#575757;font-weight:400}
-  b,strong{font-weight:700}.hl{background:#F5C300}
+  b,strong{font-weight:700}.hl{background:#F5C300}table{border-collapse:collapse;margin:.4em 0}td,th{border:1px solid #878787;padding:3pt 6pt;vertical-align:top;text-align:left}th{background:#DADADA;font-weight:700}
   footer{position:fixed;bottom:0;left:0;right:0;font-size:8.5pt;color:#575757;font-weight:400;border-top:1px solid #DADADA;padding-top:4px}
   </style></head><body><header><img src="${base}assets/logo.png" alt="didac"><span>${new Date().toLocaleDateString(locale(), { day: 'numeric', month: 'long', year: 'numeric' })}</span></header>
   <main>${html}</main><footer>Didac Schulen | Effingerstrasse 31 | 3008 Bern</footer></body></html>`;
