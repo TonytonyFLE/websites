@@ -109,3 +109,7 @@ pauses calculées automatiquement, fonctionne tous les jours. Choix gardé dans 
 - Volet de gauche : sélecteur du cours + pages de ce cours seulement ; le filtre montre aussi les résultats des autres cours.
 - Réglages de page : choix du cours (déplacer), Monter / Descendre dans le cours. Supprimer un cours supprime ses pages (confirmation).
 - Correctif : confirmBox répondait « non » toute seule après un autre dialogue (supprimer / vider une page depuis le menu de page).
+
+## v1.10.1 (28.11.2026)
+- Volet des pages en superposition (fixed, par-dessus le tableau) : le tableau garde toute sa largeur, les outils ne bougent plus.
+  Fermé à l'ouverture du site ; se referme en cliquant ailleurs ou en choisissant une page. .board isolé (isolation) pour rester sous le volet.

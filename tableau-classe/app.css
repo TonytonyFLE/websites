@@ -659,3 +659,9 @@ body.home-on .side, body.home-on .board, body.home-on .dock, body.home-on .dock-
 .home-tog[aria-pressed="true"] { background: var(--d-blanc); color: var(--d-rot); }
 @media (max-width: 760px) { .home-tog .lbl { display: none; } .home-in { padding: 20px 16px 32px; } }
 .home-foot { display: flex; justify-content: center; padding-top: 8px; }
+
+/* v1.10.1 — volet des pages en superposition : le tableau garde toute sa largeur, les outils ne bougent plus */
+body, body.side-hidden { grid-template-columns: 0 minmax(0, 1fr); }
+.side { position: fixed; z-index: 4000; left: 0; top: var(--head-h); bottom: var(--dock-h); width: 280px; max-width: 85vw; box-shadow: 0 10px 30px rgba(0,0,0,.25); border-right: 0; }
+body.dock-hidden .side { bottom: 0; }
+.board { isolation: isolate; }

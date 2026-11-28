@@ -1092,7 +1092,9 @@ function applySide() {
   $('#sideAdd').textContent = '+ ' + T('addPage'); $('#sideCat').innerHTML = `${CAT_SVG}<span>${T('allPages')}</span>`;
   $('#sideQ').placeholder = T('filterPages'); $('#sideQ').setAttribute('aria-label', T('filterPages')); $('#side').setAttribute('aria-label', T('pagesTitle'));
 }
-function setSide(hidden) { S.sideHidden = hidden; save(); applySide(); window.dispatchEvent(new Event('resize')); }
+function setSide(hidden) { S.sideHidden = hidden; save(); applySide(); }
+// le volet passe par-dessus le tableau : un clic ailleurs le referme
+document.addEventListener('pointerdown', e => { if (S.sideHidden || HOME || e.target.closest('#side, #btnSide, dialog')) return; setSide(true); });
 $('#btnSide').onclick = () => setSide(!S.sideHidden);
 $('#sideHide').onclick = () => setSide(true);
 $('#sideQ').addEventListener('input', () => renderTabs());
@@ -1178,7 +1180,7 @@ function editCourse(id) {
 }
 $('#side').addEventListener('click', e => {
   const t = e.target.closest('[data-i]');
-  if (t) { const i = +t.dataset.i; if (i === S.current) pageMenu(i); else { S.current = i; save(); renderBoard(); renderTabs(); if (matchMedia('(max-width: 760px)').matches) setSide(true); } return; }
+  if (t) { const i = +t.dataset.i; if (i === S.current) pageMenu(i); else { S.current = i; save(); renderBoard(); renderTabs(); setSide(true); } return; }
   const pn = e.target.closest('[data-pin]'); if (pn) { const p = S.pages[+pn.dataset.pin]; p.pinned = !isPinned(p); save(); renderTabs(); return; }
   if (e.target.closest('[data-act=catalog]')) { openCatalog(); return; }
   if (e.target.closest('[data-act=addPage]')) { newPage(); S.current = S.pages.length - 1; $('#sideQ').value = ''; save(); renderBoard(); renderTabs(); }
@@ -1590,7 +1592,7 @@ window.DidacApp = {
   pageLabel(p, j) { return (S.courses.length > 1 ? courseName(courseById(p.course)) + ' · ' : '') + pageName(p, j); }
 };
 
-if (S.sideHidden === undefined && matchMedia('(max-width: 760px)').matches) S.sideHidden = true;
+S.sideHidden = true; // volet fermé à l'ouverture
 applyStatic(); renderTabs(); renderBoard(); applyDock();
 setTimeout(checkBackup, 4000);
 $('#emptyTpl').addEventListener('click', openTemplates);
