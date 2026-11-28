@@ -745,3 +745,4 @@ body.dock-hidden .side { bottom: 0; }
 .gs-a { font-size: clamp(18px, 5cqmin, 36px); color: var(--d-rot); font-weight: 700; overflow-wrap: anywhere; }
 .gs-rank { text-align: left; margin: 0; padding-left: 1.4em; display: grid; gap: 4px; }
 .gs-rank li { display: flex; align-items: center; gap: 6px; }
+.fc-csv { display: inline-flex; gap: 6px; flex-wrap: wrap; }

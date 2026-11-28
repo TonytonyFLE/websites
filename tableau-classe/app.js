@@ -46,6 +46,33 @@ ensureCourses();
 S.lists = Array.isArray(S.lists) ? S.lists : [];
 const listById = id => (S.lists || []).find(l => l.id === id);
 const listCards = text => String(text || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => { const m = l.split(/\s*(?:;|\t|\s=\s|\s[–—-]\s)\s*/); return { f: m[0], b: m.slice(1).join(' ; ') }; });
+/* Import CSV des flashcards : séparateur ; , ou tabulation, guillemets, UTF-8 ou Windows-1252 (Excel) */
+function readTextFile(file) {
+  return file.arrayBuffer().then(buf => { try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { return new TextDecoder('windows-1252').decode(buf); } });
+}
+function csvRows(text) {
+  text = text.replace(/^\ufeff/, '');
+  const first = text.split(/\r?\n/)[0] || '', cnt = c => first.split(c).length - 1;
+  const sep = [['\t', cnt('\t')], [';', cnt(';')], [',', cnt(',')]].sort((a, b) => b[1] - a[1])[0][0];
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; continue; }
+    if (ch === '"' && cell === '') q = true;
+    else if (ch === sep) { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.map(r => r.map(c => c.replace(/\s+/g, ' ').trim())).filter(r => r.some(Boolean));
+}
+const FLASH_HEAD = /^(recto|verso|front|back|vorderseite|ruckseite|fronte|retro|question|reponse|frage|antwort|domanda|risposta|mot|wort|word|parola|terme|begriff|term|termine|francais|deutsch|english|italiano|traduction|ubersetzung|translation|traduzione|definition|definizione)$/;
+function flashFromCSV(text) {
+  const rows = csvRows(text); if (!rows.length) return [];
+  const norm = x => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+  if (rows.length > 1 && FLASH_HEAD.test(norm(rows[0][0] || ''))) rows.shift();
+  return rows.filter(r => r[0]).map(r => { const f = r[0].replace(/;/g, ','), rest = r.slice(1).filter(Boolean); return rest.length ? `${f} ; ${rest.join(' ; ')}` : f; });
+}
 /* Dictaphone : petite base IndexedDB locale */
 const AudioDB = (() => {
   const db = () => new Promise((res, rej) => { const r = indexedDB.open('didac-audio', 1); r.onupgradeneeded = () => r.result.createObjectStore('clips', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
@@ -402,7 +429,9 @@ const WIDGETS = {
       const cards = () => listCards(txt());
       const listBar = () => `<div class="ctl fc-lists"><select class="inp" data-role="listId" aria-label="${T('myLists')}"><option value="">${T('listHere')}</option>${S.lists.map(l => `<option value="${l.id}" ${l.id === st.listId ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select>
         ${L0() ? `<button class="btn btn--ghost btn--s" data-act="lsRen">${T('rename')}</button><button class="btn btn--ghost btn--s" data-act="lsDel">${T('delete')}</button><span class="lbl-s">${T('listShared')}</span>`
-          : `<button class="btn btn--ghost btn--s" data-act="lsSave" ${st.text.trim() ? '' : 'disabled'}>${T('listSave')}</button>`}</div>`;
+          : `<button class="btn btn--ghost btn--s" data-act="lsSave" ${st.text.trim() ? '' : 'disabled'}>${T('listSave')}</button>`}
+        <span class="fc-csv"><label class="btn btn--s" title="${T('csvFlashHint')}">${T('flashCsvBtn')}<input type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden data-role="csv"></label>
+        <button class="btn btn--ghost btn--s" data-act="csvTpl" title="${T('csvFlashTplHint')}">${T('csvTemplate')}</button></span></div>`;
       function askName(title, val, done) {
         openDlg(`<h2>${title}</h2><label class="field"><span>${T('listName')}</span><input class="inp" id="lsName" value="${esc(val)}" placeholder="${T('listNamePh')}"></label>
           <div class="row row--end"><button class="btn btn--ghost" data-act="closeDlg">${T('cancel')}</button><button class="btn" id="lsOk">${T('save')}</button></div>`, body => {
@@ -454,11 +483,23 @@ const WIDGETS = {
         if (r === 'shuffle') { st.shuffle = e.target.checked; save(); }
         if (r === 'reverse') { st.reverse = e.target.checked; save(); }
         if (r === 'listId') { st.listId = e.target.value; st.order = []; save(); render(); }
+        if (r === 'csv' && e.target.files[0]) {
+          const file = e.target.files[0];
+          readTextFile(file).then(text => {
+            const lines = flashFromCSV(text);
+            if (!lines.length) { alertBox(T('csvFlashEmpty')); return; }
+            const name = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || T('flashCards');
+            const l = { id: uid(), name, text: lines.join('\n'), created: Date.now() }; S.lists.push(l);
+            st.listId = l.id; st.order = []; st.view = 'edit'; save(); render();
+            toast(T('csvFlashDone').replace('{n}', lines.length).replace('{l}', esc(name)));
+          });
+        }
       });
       b.addEventListener('click', e => {
         const md = e.target.closest('[data-mode]'); if (md) { st.mode = md.dataset.mode; save(); render(); return; }
         const a = e.target.closest('[data-act]'); if (!a) return;
         const act = a.dataset.act, L = left();
+        if (act === 'csvTpl') { download(T('csvFlashFile') + '.csv', '\ufeff' + T('csvFlashSample'), 'text/csv;charset=utf-8'); return; }
         if (act === 'lsSave') { askName(T('listSave'), '', n => { const l = { id: uid(), name: n, text: st.text, created: Date.now() }; S.lists.push(l); st.listId = l.id; st.text = ''; save(); render(); toast(T('listSaved').replace('{n}', esc(n))); }); return; }
         if (act === 'lsRen') { askName(T('rename'), L0().name, n => { L0().name = n; save(); render(); }); return; }
         if (act === 'lsDel') { const l = L0(); confirmBox(T('listDelQ').replace('{n}', esc(l.name)), T('delete')).then(ok => { if (!ok) return; st.text = l.text; S.lists = S.lists.filter(x => x !== l); st.listId = ''; save(); render(); }); return; }

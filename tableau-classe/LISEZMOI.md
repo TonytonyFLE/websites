@@ -135,3 +135,7 @@ pauses calculées automatiquement, fonctionne tous les jours. Choix gardé dans 
   « Modifier la salle » = retirer/remettre des places ; absents barrés ; banc des élèves non placés.
 - Jeu de l'oie (goose) : 12-80 cases en serpentin, 1-2 dés, 1-8 équipes nommées, cartes tirées de Mes listes (réponse cachée, Juste = 1 ★),
   cases spéciales +2 / −3 / rejoue, scoreboard, classement final. Dé via crypto.getRandomValues.
+
+## v1.12.1 (28.11.2026) : import CSV des flashcards
+- Flashcards : « Importer un CSV » (col. 1 recto, col. 2 verso, colonnes suivantes ajoutées au verso ; ; , ou tabulation ;
+  UTF-8 ou Windows-1252 ; ligne d'en-tête reconnue et ignorée) → nouvelle liste dans Mes listes (nom = nom du fichier). « Modèle CSV » à télécharger.
