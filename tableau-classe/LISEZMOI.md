@@ -120,3 +120,10 @@ pauses calculées automatiquement, fonctionne tous les jours. Choix gardé dans 
 - Coller un tableau de Word / Excel / Google Sheets / page web : structure gardée (fusion colspan/rowspan, gras), le reste nettoyé.
   Texte avec tabulations → tableau. Autre texte collé : toujours en texte brut.
 - Les tableaux passent dans l'export PDF.
+
+## v1.11.1 (28.11.2026) : correctif positions des outils
+- Bug v1.10 : au démarrage, la page courante était affichée pendant que le tableau était caché par l'accueil (taille 0),
+  et clampBox enregistrait tous les outils en 180×120 en haut à gauche. clampBox ne fait plus rien si le tableau est caché.
+- Les positions enregistrées ne sont plus jamais modifiées par la taille de l'écran (fit() = affichage seulement) :
+  seuls un déplacement ou un redimensionnement à la main les changent.
+- Réglages de page : « Ranger les outils » (grille qui remplit le tableau) pour réparer vite une page.

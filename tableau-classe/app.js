@@ -1350,10 +1350,21 @@ function renderBoard() {
 }
 function clampBox(wd) {
   const r = board.getBoundingClientRect();
+  if (r.width < 50 || r.height < 50) return; // tableau caché (accueil, espace prof) : ne jamais toucher aux positions
   wd.w = Math.min(Math.max(180, wd.w), Math.max(180, r.width));
   wd.h = Math.min(Math.max(120, wd.h), Math.max(120, r.height));
   wd.x = Math.min(Math.max(0, wd.x), Math.max(0, r.width - wd.w));
   wd.y = Math.min(Math.max(0, wd.y), Math.max(0, r.height - wd.h));
+}
+// affichage seulement : sur un écran plus petit, l'outil est ramené dans le tableau sans modifier sa position enregistrée
+function fit(wd) { const c = { x: wd.x, y: wd.y, w: wd.w, h: wd.h, z: wd.z }; clampBox(c); return c; }
+// « Ranger les outils » : grille régulière qui remplit le tableau
+function tidyPage(p) {
+  const r = board.getBoundingClientRect(); if (r.width < 50) return;
+  const n = p.widgets.length; if (!n) return;
+  const cols = Math.ceil(Math.sqrt(n * r.width / r.height / 1.3)), rows = Math.ceil(n / cols), g = 12;
+  const cw = (r.width - g * (cols + 1)) / cols, ch = (r.height - g * (rows + 1)) / rows;
+  p.widgets.forEach((wd, i) => { const c = i % cols, rr = Math.floor(i / cols); wd.x = Math.round(g + c * (cw + g)); wd.y = Math.round(g + rr * (ch + g)); wd.w = Math.round(cw); wd.h = Math.round(ch); clampBox(wd); });
 }
 function placeEl(el, wd) { el.style.left = wd.x + 'px'; el.style.top = wd.y + 'px'; el.style.width = wd.w + 'px'; el.style.height = wd.h + 'px'; el.style.zIndex = wd.z || 10; }
 
@@ -1362,7 +1373,7 @@ function mountWidget(wd) {
   const el = h(`<section class="w" data-id="${wd.id}" aria-label="${T('w_' + wd.type)}">
     <div class="w-head"><span class="w-title">${T('w_' + wd.type)}</span>${def.compact ? `<button class="w-opt" data-act="compact" aria-pressed="${!!wd.state.compact}">${wd.state.compact ? T('fullView') : T('lightView')}</button>` : ''}<button class="w-x" title="${T('close')}" aria-label="${T('close')}">×</button></div>
     <div class="w-body"></div><div class="w-resize" title="${T('resize')}"></div></section>`);
-  board.appendChild(el); clampBox(wd); placeEl(el, wd);
+  board.appendChild(el); placeEl(el, fit(wd));
   const body = $('.w-body', el);
   const ctx = { el };
   el.classList.toggle('is-compact', !!wd.state.compact);
@@ -1379,8 +1390,8 @@ function mountWidget(wd) {
   el.addEventListener('pointerdown', () => { if ((wd.z || 0) < S.z) { wd.z = ++S.z; el.style.zIndex = wd.z; save(); } }, true);
   $('.w-x', el).onclick = () => removeWidget(wd.id);
   body.addEventListener('click', e => { if (e.target.closest('[data-act=openClasses]')) openClasses(); });
-  dragify($('.w-head', el), (dx, dy, start) => { wd.x = start.x + dx; wd.y = start.y + dy; clampBox(wd); placeEl(el, wd); }, () => ({ x: wd.x, y: wd.y }));
-  dragify($('.w-resize', el), (dx, dy, start) => { wd.w = start.w + dx; wd.h = start.h + dy; clampBox(wd); placeEl(el, wd); }, () => ({ w: wd.w, h: wd.h }));
+  dragify($('.w-head', el), (dx, dy, start) => { wd.x = start.x + dx; wd.y = start.y + dy; clampBox(wd); placeEl(el, wd); }, () => { const f = fit(wd); return { x: f.x, y: f.y }; });
+  dragify($('.w-resize', el), (dx, dy, start) => { wd.w = start.w + dx; wd.h = start.h + dy; clampBox(wd); placeEl(el, wd); }, () => { const f = fit(wd); return { w: f.w, h: f.h }; });
 }
 function dragify(handle, move, getStart) {
   handle.addEventListener('pointerdown', e => {
@@ -1472,6 +1483,7 @@ function pageMenu(i) {
       <button class="btn btn--ghost btn--s" data-m="pin">${isPinned(p) ? '★ ' + T('unpinTab') : '☆ ' + T('pinTab')}</button>
       <button class="btn btn--ghost btn--s" data-m="dup">${T('duplicate')}</button>
       <button class="btn btn--ghost btn--s" data-m="tpl" ${p.widgets.length ? '' : 'disabled'}>${T('saveTpl')}</button>
+      <button class="btn btn--ghost btn--s" data-m="tidy" ${p.widgets.length ? '' : 'disabled'}>${T('tidyPage')}</button>
       <button class="btn btn--ghost btn--s" data-m="clear">${T('clearPage')}</button>
       <button class="btn btn--black btn--s" data-m="del" ${S.pages.length < 2 ? 'disabled' : ''}>${T('deletePage')}</button>
     </div>
@@ -1485,6 +1497,7 @@ function pageMenu(i) {
       if (m === 'left' || m === 'right') { const j = sib(m === 'left' ? -1 : 1); if (j >= 0) { [S.pages[i], S.pages[j]] = [S.pages[j], S.pages[i]]; S.current = j; } }
       if (m === 'tpl') { save(); renderTabs(); saveAsTemplate(i); return; }
       if (m === 'pin') p.pinned = !isPinned(p);
+      if (m === 'tidy') tidyPage(p);
       if (m === 'dup') { const c = JSON.parse(JSON.stringify(p)); c.id = uid(); c.name = (p.name || pageName(p, i)) + ' (2)'; c.widgets.forEach(w => w.id = uid()); S.pages.splice(i + 1, 0, c); S.current = i + 1; }
       if (m === 'clear') { closeDlg(); if (await confirmBox(T('clearPageQ'))) { p.widgets = []; } }
       if (m === 'del') { closeDlg(); if (await confirmBox(T('deletePageQ').replace('{p}', esc(pageName(p, i))), T('deletePage'))) { S.pages.splice(i, 1); S.current = Math.max(0, Math.min(S.current, S.pages.length - 1)); } }
@@ -1681,7 +1694,7 @@ if (!window.DIDAC_I18N[S.lang]) setLang(S.lang);
 $('#btnClasses').onclick = () => openClasses();
 $('#btnFull').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); };
 document.addEventListener('fullscreenchange', applyStatic);
-let rzT; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { page().widgets.forEach(wd => { clampBox(wd); const m = mounted.get(wd.id); if (m) placeEl(m.el, wd); }); }, 150); });
+let rzT; window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { page().widgets.forEach(wd => { const m = mounted.get(wd.id); if (m) placeEl(m.el, fit(wd)); }); }, 150); });
 
 /* ---------- API partagée avec prof.js ---------- */
 window.DidacApp = {
